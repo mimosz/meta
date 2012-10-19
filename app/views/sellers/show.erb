@@ -40,7 +40,7 @@
             <% item.sales.each do |sale| %>
               <tr class='warning'>
                 <td><%= sale.outer_id %></td>
-                <td><%= sale.num_iid %></td>
+                <td></td>
                 <td><%= sale.price %></td>
                 <td><%= sale.prom_type %></td>
                 <td><%= sale.prom_price %></td>
@@ -50,7 +50,7 @@
                 <td><%= sale.favs_count %></td>
                 <td><%= sale.skus_count %></td>
                 <td><%= sale.title %></td>
-                <td><%= image_tag sale.pic_url, width: '48px', height: '48px' %></td>
+                <td><%= image_tag sale.pic_url, width: '48px', height: '48px' unless sale.pic_url.nil? %></td>
                 <td><%= sale.date %></td>
               </tr>
             <% end %>

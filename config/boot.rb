@@ -8,16 +8,22 @@ PADRINO_ROOT = File.expand_path('../..', __FILE__) unless defined?(PADRINO_ROOT)
 require 'rubygems' unless defined?(Gem)
 require 'bundler/setup'
 Bundler.require(:default, PADRINO_ENV)
-
+# 兼容 Rails
+module Rails
+    def self.root
+      PADRINO_ROOT
+    end
+    def self.logger
+      Padrino.logger
+    end
+end
 ##
 # ## Enable devel logging
 #
-# Padrino::Logger::Config[:development][:log_level]  = :devel
-# Padrino::Logger::Config[:development][:log_static] = true
-#
+Rails.logger.colorize!
 # ## Configure your I18n
 #
-I18n.default_locale = :zh_cn
+# I18n.default_locale = :zh_cn
 #
 # ## Configure your HTML5 data helpers
 #

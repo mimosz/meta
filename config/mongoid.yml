@@ -7,4 +7,5 @@ development:
       hosts: 
         - db.innshine.com:27017
   options:
+      identity_map_enabled: true
       skip_version_check: true

@@ -5,15 +5,7 @@ class Seller
   include Mongoid::Document
   include Mongoid::Timestamps # adds created_at and updated_at fields
   # Referenced
-  has_many :categories, foreign_key: 'seller_nick' do # 分类
-    def sync_ids
-      distinct('_id')
-    end
-
-    def parents
-      where(parent_id: nil)
-    end
-  end
+  has_many :categories, foreign_key: 'seller_nick' # 分类
   has_many :items,      foreign_key: 'seller_nick'
 
   attr_accessor :crawler
@@ -26,6 +18,17 @@ class Seller
   field :store_url,   type: String
   field :_id,         type: String, default: -> { seller_nick }
 
+  def category_parents
+    categories.where(parent_id: nil)
+  end
+
+  def item_arrivals
+    items.not_in(_id: Sale.where( seller_nick: _id).only(:num_iid).distinct(:num_iid))
+  end
+
+  def item_paids(range = Date.today)
+    items.where(:_id.in => Sale.where( seller_nick: _id, :month_num.lt => 0, date: range).only(:num_iid).distinct(:num_iid))
+  end
 
   def sync
     Seller.sync(store_url)

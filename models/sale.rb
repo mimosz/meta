@@ -29,6 +29,8 @@ class Sale
 
   field :date,      type: Date
 
+  default_scope desc(:date)
+
   class << self
     def sync(item)
       last_sale = where(num_iid: item[:num_iid].to_i, date: item[:date]).last
