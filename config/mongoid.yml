@@ -1,0 +1,10 @@
+development:
+  sessions:
+    default:
+      database: meta
+      username: howl
+      password: '800622'
+      hosts: 
+        - db.innshine.com:27017
+  options:
+      skip_version_check: true

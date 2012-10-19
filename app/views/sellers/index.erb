@@ -1,0 +1,44 @@
+
+<h3>店铺列表</h3>
+<table id="sellers" class="table table-bordered">
+  <thead>
+    <tr>
+      <th>店铺名称</th>
+      <th>抓取时间</th>
+      <th>#</th>
+    </tr>
+  <thead>
+  <% unless @sellers.empty? %>
+    <tbody>
+    <% @sellers.each do |seller| %>
+        <tr>
+          <td><%= link_to seller.seller_nick, seller.store_url %></td>
+          <td>
+            <% unless seller.categories.empty? %>
+              <ul class='nav nav-list'>
+                <% seller.categories.parents.each do |category| %>
+                  <% unless category.children.empty? %>
+                    <li id='<%= category.cat_id %>' class='nav-header'><%= link_to category.cat_name, '#' %></li>
+                    <% category.children.each do |child| %>
+                      <li id='<%= child.cat_id %>'><%= link_to '<i class="icon-chevron-right"></i>'+child.cat_name, '#' %></li>
+                    <% end %>
+                    <li class='divider'></li>
+                  <% else %>
+                    <li id='<%= category.cat_id %>'><%= link_to category.cat_name, '#' %></li>
+                  <% end %>
+                <% end %>
+              </ul>
+            <% else %>
+              店铺内，没有分类～～
+            <% end %>
+          </td>
+          <td><%= link_to '全部货品', url(:sellers, :show, seller_id: seller._id) %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  <% else %>
+    <tr>
+      <td colspan="3">没货品～～</td>
+    </tr>
+  <% end %>
+</table>
