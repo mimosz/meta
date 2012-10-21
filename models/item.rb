@@ -3,19 +3,16 @@ require 'pp'
 
 class Item
   include Mongoid::Document
-  include Mongoid::Timestamps # adds created_at and updated_at fields
+  include Mongoid::Timestamps
   # Referenced
   has_and_belongs_to_many :categories do
     def cat_names
-      distinct('cat_name')
+      only(:cat_name).distinct(:cat_name)
     end
   end
-  has_many   :sales,  foreign_key: 'num_iid' do
-    def latest
-      where(date: Date.today)
-    end
-  end
-  belongs_to :seller, foreign_key: 'seller_nick'
+
+  embeds_many :sales,  class_name:  'ItemSale'
+  belongs_to  :seller, foreign_key: 'seller_nick'
 
   # Fields
   field :num_iid,     type: Integer
@@ -40,21 +37,26 @@ class Item
   field :_id,         type: Integer, default: -> { num_iid }
 
   def diff(item)
-    sale = { num_iid: num_iid, seller_nick: seller_nick, date: Date.today}
-
+    sale = { num_iid: num_iid, seller_nick: seller_nick, date: Date.today }
+    # 宝贝信息
     sale[:outer_id]   = item[:outer_id]  unless item[:outer_id]  == outer_id
     sale[:title]      = item[:title]     unless item[:title]     == title
-    sale[:pic_url]    = item[:pic_url]   unless item[:pic_url]   == pic_url 
-    sale[:prom_type]  = item[:prom_type] if item[:prom_type]
-
+    sale[:pic_url]    = item[:pic_url]   unless item[:pic_url]   == pic_url
+    # 优惠活动
+    if item[:prom_type] 
+      sale[:prom_type]  = item[:prom_type]
+      sale[:prom_price] = (item[:prom_price].to_f - prom_price).round(2) if item[:prom_price]
+    end
+    # 价格
     sale[:price]      = (item[:price].to_f - price).round(2)
-    sale[:prom_price] = (item[:prom_price].to_f - prom_price).round(2) if item[:prom_price]
-
-    sale[:total_num]  = item[:total_num].to_i  - total_num
-    sale[:month_num]  = item[:month_num].to_i  - month_num
+    # 销售
+    sale[:total_num]  = item[:total_num] - total_num.to_i
+    sale[:month_num]  = item[:month_num] - month_num.to_i
+    # 库存
     sale[:quantity]   = item[:quantity].to_i   - quantity
-    sale[:favs_count] = item[:favs_count].to_i - favs_count
     sale[:skus_count] = item[:skus_count].to_i - skus_count
+    # 收藏
+    sale[:favs_count] = item[:favs_count].to_i - favs_count
 
     return sale
   end
@@ -66,7 +68,6 @@ class Item
       @seller   = seller
       @crawler  = Crawler.new(seller.store_url)
       @category = nil
-
 
       if page_dom
         puts "没有店铺类目。"
@@ -169,8 +170,12 @@ class Item
             current_item.categories << @category
             current_item.save
           end
-          sales = current_item.diff(item)
-          if Sale.sync(sales)
+          sale         = current_item.diff(item)
+          current_sale = current_item.sales.where(date: sale[:date]).last
+          if current_sale
+            puts "跳过，重复计算。"
+          else
+            current_item.sales << ItemSale.new(sale)
             current_item.update_attributes(item)
           end
         else

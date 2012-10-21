@@ -6,7 +6,14 @@ class Seller
   include Mongoid::Timestamps # adds created_at and updated_at fields
   # Referenced
   has_many :categories, foreign_key: 'seller_nick' # 分类
-  has_many :items,      foreign_key: 'seller_nick'
+  has_many :items,      foreign_key: 'seller_nick' do
+    def new_arrivals
+      where(sales: nil)
+    end
+    def paids(range = Date.today)
+      where(:'sales.month_num'.lt => 0, 'sales.date' => range)
+    end
+  end
 
   attr_accessor :crawler
 
@@ -22,13 +29,13 @@ class Seller
     categories.where(parent_id: nil)
   end
 
-  def item_arrivals
-    items.not_in(_id: Sale.where( seller_nick: _id).only(:num_iid).distinct(:num_iid))
-  end
+  # def item_arrivals
+  #   items.not_in(_id: Sale.where( seller_nick: _id).only(:num_iid).distinct(:num_iid))
+  # end
 
-  def item_paids(range = Date.today)
-    items.where(:_id.in => Sale.where( seller_nick: _id, :month_num.lt => 0, date: range).only(:num_iid).distinct(:num_iid))
-  end
+  # def item_paids(range = Date.today)
+  #   items.where(:_id.in => Sale.where( seller_nick: _id, :month_num.lt => 0, date: range).only(:num_iid).distinct(:num_iid))
+  # end
 
   def sync
     Seller.sync(store_url)
