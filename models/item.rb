@@ -36,6 +36,8 @@ class Item
 
   field :_id,         type: Integer, default: -> { num_iid }
 
+  default_scope desc(:favs_count)
+
   def diff(item)
     sale = { num_iid: num_iid, seller_nick: seller_nick, date: Date.today }
     # 宝贝信息
@@ -59,6 +61,10 @@ class Item
     sale[:favs_count] = item[:favs_count].to_i - favs_count
 
     return sale
+  end
+
+  def item_url
+    'http://detail.tmall.com/item.htm?id=' << num_iid.to_s
   end
 
   class << self
@@ -170,13 +176,13 @@ class Item
             current_item.categories << @category
             current_item.save
           end
-          sale         = current_item.diff(item)
-          current_sale = current_item.sales.where(date: sale[:date]).last
-          if current_sale
-            puts "跳过，重复计算。"
-          else
+          if current_item.updated_at.to_date > Date.today
+            sale = current_item.diff(item)
+
             current_item.sales << ItemSale.new(sale)
             current_item.update_attributes(item)
+          else
+            puts "跳过，重复计算。"
           end
         else
           item.merge!({categories: [@category]}) if @category
@@ -225,7 +231,20 @@ class Item
         prom = root['itemPriceResultDO']['priceInfo']['def']
         if prom && prom['promPrice']
           prom_type  = prom['promPrice']['type']
-          prom_price = prom['promPrice']['price'].to_f
+          wanrentuan = root['itemPriceResultDO']['wanrentuanInfo']
+          if prom_type == '万人团' && wanrentuan
+            pay_count  = wanrentuan['groupUC'].to_i
+            counts     = wanrentuan['wrtLevelNeedCounts'].reverse
+            prices     = wanrentuan['wrtLevelFinalPrices'].reverse
+            counts.each_with_index do |count, i|
+              if pay_count > count
+                prom_price = (prices[i].to_f / 100).round(2)
+                break
+              end
+            end
+          else
+            prom_price = prom['promPrice']['price'].to_f
+          end
           sales.merge!({ prom_price: prom_price, prom_type: prom_type })
         end
       else

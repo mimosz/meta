@@ -1,10 +1,10 @@
 <% unless @seller.nil? %>
   <h3><%= link_to @seller.seller_nick, @seller.store_url %></h3>
-  <table id="items" class="table table-bordered">
+  <table id='items' class='table table-bordered'>
     <thead>
       <tr>
-        <th>商家编码</th>
         <th>宝贝ID</th>
+        <th>商家编码</th>
         <th>售价</th>
         <th>活动</th>
         <th>活动售价</th>
@@ -15,35 +15,41 @@
         <th>SKU数</th>
         <th>标题</th>
         <th>图片</th>
-        <th>抓取时间</th>
       </tr>
     <thead>
     <% unless @seller.items.empty? %>
       <tbody>
       <% @seller.items.each do |item| %>
           <tr>
-            <td><%= item.outer_id %></td>
             <td><%= item.num_iid %></td>
+            <td><%= item.outer_id %></td>
             <td><%= item.price %></td>
-            <td><%= item.prom_type %></td>
-            <td><%= item.prom_price %></td>
+            <% if item.prom_type %>
+              <td><%= item.prom_type %></td>
+              <td><%= item.prom_price %></td>
+            <% else %>
+              <td colspan='2'> -- </td>
+            <% end %>
             <td><%= item.month_num %></td>
             <td><%= item.total_num %></td>
             <td><%= item.quantity %></td>
             <td><%= item.favs_count %></td>
             <td><%= item.skus_count %></td>
-            <td><%= item.title %></td>
+            <td><%= link_to item.title, item.item_url %></td>
             <td><%= image_tag item.pic_url, width: '48px', height: '48px' %></td>
-            <td><%= item.updated_at %></td>
           </tr>
           <% unless item.sales.empty? %>
             <% item.sales.each do |sale| %>
               <tr class='warning'>
+                <td><%= distance_of_time_in_words(sale.date) %></td>
                 <td><%= sale.outer_id %></td>
-                <td></td>
                 <td><%= sale.price %></td>
-                <td><%= sale.prom_type %></td>
-                <td><%= sale.prom_price %></td>
+                <% if sale.prom_type %>
+                  <td><%= sale.prom_type %></td>
+                  <td><%= sale.prom_price %></td>
+                <% else %>
+                  <td colspan='2'> -- </td>
+                <% end %>
                 <td><%= sale.month_num %></td>
                 <td><%= sale.total_num %></td>
                 <td><%= sale.quantity %></td>
@@ -51,7 +57,6 @@
                 <td><%= sale.skus_count %></td>
                 <td><%= sale.title %></td>
                 <td><%= image_tag sale.pic_url, width: '48px', height: '48px' unless sale.pic_url.nil? %></td>
-                <td><%= sale.date %></td>
               </tr>
             <% end %>
           <% end %>
@@ -59,7 +64,7 @@
       </tbody>
     <% else %>
       <tr>
-        <td colspan="13">没货品～～</td>
+        <td colspan='12'>没货品～～</td>
       </tr>
     <% end %>
   </table>

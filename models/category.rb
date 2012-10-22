@@ -61,7 +61,8 @@ class Category
     end
 
     def parse_name(link_dom)
-      name = link_dom.text || link_dom.at('img')['alt']
+      name = link_dom.text
+      name = link_dom.at('img')[:alt] if name.blank?
       name.strip
     end
 
