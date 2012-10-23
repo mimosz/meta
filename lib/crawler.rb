@@ -25,13 +25,14 @@ class Crawler
     request.headers.merge!(value)
   end
 
+
   def get_html(opts={})
     path      = opts[:path]      || request.query_path
     try_count = opts[:try_count] || 0
     debug # 调试
     response = request.connection.get(path)
-    return response.body.force_encoding("GBK").encode("UTF-8")
-  rescue Nestful::TimeoutError => error
+    return response.body.force_encoding('GB18030').encode('UTF-8')
+  rescue Nestful::TimeoutError, Errno::ETIMEDOUT, Errno::ECONNRESET
     if opts[:try_count].to_i < 3 # 重试3次
       puts "========================开始重试========================"
       get_html({try_count: (try_count + 1)})
@@ -40,9 +41,10 @@ class Crawler
     end
   rescue Nestful::Redirection => error
     location = error.response['Location']
-    if location.include?('deny.html')
-      puts "===========================宝宝醒了~~"
-      exit
+    if location.include?('deny.html') || location.include?('error.php')
+      puts "========================宝宝醒了，换浏览器。========================"
+      self.headers = { 'User-Agent' => switcher, 'Referer' => request.url }
+      get_html({try_count: (try_count + 1)})
     else
       url = location
       get_html({path: fixed_path, try_count: try_count})
@@ -51,7 +53,7 @@ class Crawler
 
   def get_json(try_count=0)
     request.execute
-  rescue Nestful::TimeoutError => error
+  rescue Nestful::TimeoutError, Errno::ETIMEDOUT
     if try_count < 3 # 重试3次
       puts "========================开始重试========================"
       get_json(try_count + 1)

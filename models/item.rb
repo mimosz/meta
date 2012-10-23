@@ -24,8 +24,9 @@ class Item
 
   field :prom_type,   type: String
 
-  field :price,       type: Float,   default: 0
-  field :prom_price,  type: Float,   default: 0
+  field :price,         type: Float,   default: 0
+  field :prom_price,    type: Float,   default: -> { price }
+  field :prom_discount, type: Integer, default: 100
 
   field :total_num,   type: Integer, default: 0
   field :month_num,   type: Integer, default: 0
@@ -33,6 +34,7 @@ class Item
 
   field :favs_count,  type: Integer, default: 0
   field :skus_count,  type: Integer, default: 0
+  field :post_fee,    type: Boolean, default: false
 
   field :_id,         type: Integer, default: -> { num_iid }
 
@@ -46,8 +48,9 @@ class Item
     sale[:pic_url]    = item[:pic_url]   unless item[:pic_url]   == pic_url
     # 优惠活动
     if item[:prom_type] 
-      sale[:prom_type]  = item[:prom_type]
-      sale[:prom_price] = (item[:prom_price].to_f - prom_price).round(2) if item[:prom_price]
+      sale[:prom_type]     = item[:prom_type]
+      sale[:prom_price]    = (item[:prom_price].to_f - prom_price).round(2) if item[:prom_price]
+      sale[:prom_discount] = item[:prom_discount] - prom_discount 
     end
     # 价格
     sale[:price]      = (item[:price].to_f - price).round(2)
@@ -57,6 +60,8 @@ class Item
     # 库存
     sale[:quantity]   = item[:quantity].to_i   - quantity
     sale[:skus_count] = item[:skus_count].to_i - skus_count
+    # 包邮
+    sale[:post_fee]   = item[:post_fee]  unless item[:post_fee] == post_fee
     # 收藏
     sale[:favs_count] = item[:favs_count].to_i - favs_count
 
@@ -159,36 +164,45 @@ class Item
 
     def each_items(items_dom)
       items_dom.each do |item_dom|
-        item_link  = item_dom.at('div.pic').at('a')
-        num_iid    = parse_num_iid(item_link)
-        pic_url    = parse_pic_url(item_link)
+        item = parse_item(item_dom)
+        if item
+          # 取值完毕，开始操作数据库
+          current_item = where(_id: item[:num_iid].to_i).last
+          if current_item
+            if @category && !current_item.category_ids.include?(@category.cat_id)
+              current_item.categories << @category
+              current_item.save
+            end
+            if current_item.updated_at.to_date > Date.today
+              set_item_sales(item)
+              sale = current_item.diff(item)
 
-        title      = item_dom.at('div.desc').at('a').text.strip
-        price      = item_dom.at('div.price').at('strong').text[0..-3].to_f
-        total_num  = item_dom.at('div.sales-amount').at('em').text.to_i
-
-        item = { num_iid: num_iid, outer_id: parse_outer_id(title), favs_count: @crawler.get_favs_count(num_iid), total_num: total_num, title: title, pic_url: pic_url, price: price }
-        set_item_sales(item)
-        # 取值完毕，开始操作数据库
-        current_item = where(_id: item[:num_iid].to_i).last
-        if current_item
-          if @category && !current_item.category_ids.include?(@category.cat_id)
-            current_item.categories << @category
-            current_item.save
-          end
-          if current_item.updated_at.to_date > Date.today
-            sale = current_item.diff(item)
-
-            current_item.sales << ItemSale.new(sale)
-            current_item.update_attributes(item)
+              current_item.sales << ItemSale.new(sale)
+              current_item.update_attributes(item)
+            else
+              puts "跳过，重复计算。"
+            end
           else
-            puts "跳过，重复计算。"
+            set_item_sales(item)
+            item[:categories] = [@category] if @category
+            current_item      = @seller.items.create(item)
           end
-        else
-          item.merge!({categories: [@category]}) if @category
-          current_item = @seller.items.create(item)
         end
       end
+    end
+
+    def parse_item(item_dom)
+      item_link = item_dom.at('div.pic').at('a')
+      if item_link
+        num_iid   = parse_num_iid(item_link)
+        pic_url   = parse_pic_url(item_link)
+
+        title     = item_dom.at('div.desc').at('a').text.strip
+        price     = item_dom.at('div.price').at('strong').text[0..-3].to_f
+        total_num = item_dom.at('div.sales-amount').at('em').text.to_i
+        return { num_iid: num_iid, outer_id: parse_outer_id(title), total_num: total_num, title: title, pic_url: pic_url, price: price }
+      end
+      nil
     end
 
     def parse_num_iid(link_dom)
@@ -215,15 +229,20 @@ class Item
     end
 
     def set_item_sales(node)
+      # 宝贝销售数据
       sales_json = @crawler.tmall_item_json(@seller.seller_id, node[:num_iid]) # 地址被改变
       sales      = parse_sales(sales_json) if sales_json
       node.merge!(sales)
+      # 宝贝收藏数
+      favs_count = @crawler.get_favs_count(node[:num_iid])
+      node[:favs_count] = favs_count if favs_count
     end
 
     def parse_sales(json)
       sales = {}
       if json['isSuccess']
         root = json['defaultModel']
+
         month_num  = root['sellCountDO']['sellCount']
         quantity   = root['inventoryDO']['icTotalQuantity']
         skus_count = root['inventoryDO']['skuQuantity'].count
@@ -244,8 +263,14 @@ class Item
             end
           else
             prom_price = prom['promPrice']['price'].to_f
+            price      = prom['price'].to_f
           end
-          sales.merge!({ prom_price: prom_price, prom_type: prom_type })
+          sales[:prom_price]     = prom_price
+          sales[:prom_type]      = prom_type
+          sales[:prom_discount]  = prom_price/price*100
+        end
+        if root['deliveryDO']['deliverySkuMap']['default'][0]['postage'] = '商家承担运费'
+          sales[:post_fee] = true
         end
       else
         puts "模板变更需要调整：#{@crawler.request.url}"

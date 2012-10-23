@@ -8,6 +8,7 @@
         <th>售价</th>
         <th>活动</th>
         <th>活动售价</th>
+        <th>活动折扣</th>
         <th>月销量</th>
         <th>总销量</th>
         <th>剩余库存</th>
@@ -21,14 +22,15 @@
       <tbody>
       <% @seller.items.each do |item| %>
           <tr>
-            <td><%= item.num_iid %></td>
+            <td><%= item.num_iid %><%= "<span class='label label-warning'>包邮</span>" if item.post_fee %></td>
             <td><%= item.outer_id %></td>
             <td><%= item.price %></td>
             <% if item.prom_type %>
               <td><%= item.prom_type %></td>
               <td><%= item.prom_price %></td>
+              <td><%= item.prom_discount %>%</td>
             <% else %>
-              <td colspan='2'> -- </td>
+              <td colspan='3'> -- </td>
             <% end %>
             <td><%= item.month_num %></td>
             <td><%= item.total_num %></td>
@@ -64,7 +66,7 @@
       </tbody>
     <% else %>
       <tr>
-        <td colspan='12'>没货品～～</td>
+        <td colspan='13'>没货品～～</td>
       </tr>
     <% end %>
   </table>

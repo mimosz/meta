@@ -12,10 +12,11 @@ class ItemSale
   field :title,       type: String
   field :pic_url,     type: String 
 
-  field :price,       type: Float,   default: 0
-  
   field :prom_type,   type: String
-  field :prom_price,  type: Float
+
+  field :price,         type: Float,   default: 0
+  field :prom_price,    type: Float,   default: -> { price }
+  field :prom_discount, type: Integer, default: 100
 
   field :total_num,   type: Integer, default: 0
   field :month_num,   type: Integer, default: 0
@@ -24,8 +25,9 @@ class ItemSale
   field :favs_count,  type: Integer, default: 0
   field :skus_count,  type: Integer, default: 0
 
+  field :post_fee,    type: Boolean, default: false
+
   field :date,        type: Date
   field :_id,         type: Date, default: -> { date }
 
-  # default_scope desc(:date)
 end
