@@ -15,7 +15,6 @@
         <th>收藏数</th>
         <th>SKU数</th>
         <th>标题</th>
-        <th>图片</th>
       </tr>
     <thead>
     <% unless @seller.items.empty? %>
@@ -30,7 +29,9 @@
               <td><%= item.prom_price %></td>
               <td><%= item.prom_discount %>%</td>
             <% else %>
-              <td colspan='3'> -- </td>
+              <td> N/A </td>
+              <td> N/A </td>
+              <td> N/A </td>
             <% end %>
             <td><%= item.month_num %></td>
             <td><%= item.total_num %></td>
@@ -38,7 +39,6 @@
             <td><%= item.favs_count %></td>
             <td><%= item.skus_count %></td>
             <td><%= link_to item.title, item.item_url %></td>
-            <td><%= image_tag item.pic_url, width: '48px', height: '48px' %></td>
           </tr>
           <% unless item.sales.empty? %>
             <% item.sales.each do |sale| %>
@@ -58,7 +58,6 @@
                 <td><%= sale.favs_count %></td>
                 <td><%= sale.skus_count %></td>
                 <td><%= sale.title %></td>
-                <td><%= image_tag sale.pic_url, width: '48px', height: '48px' unless sale.pic_url.nil? %></td>
               </tr>
             <% end %>
           <% end %>
