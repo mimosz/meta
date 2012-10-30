@@ -1,6 +1,7 @@
 # -*- encoding: utf-8 -*-
 require 'nestful'
 require 'nokogiri'
+require 'pp'
 
 class Crawler
   def initialize(url)
@@ -97,7 +98,10 @@ class Crawler
     if html
       html = html.force_encoding("GBK").encode("UTF-8")
       json = html.match(/item\((.*)\)/)[1]
-      return ActiveSupport::JSON.decode(json) if json
+      if json
+        pp json
+        return ActiveSupport::JSON.decode(json)
+      end
     else
       puts "模板变更需要调整：#{request.url}"
     end
@@ -127,9 +131,19 @@ class Crawler
     html = get_json
     if html
       html = html.force_encoding("GBK").encode("UTF-8")
-      json = html.match(/item\((.*)\)/)[1]
-      return ActiveSupport::JSON.decode(json) if json
+      json = html.match(/item\((.*)\)/)
+      if json
+        json     = json[1]
+        int_keys = json.scan(/([0-9]+):/)
+        unless int_keys.empty? # 检测非法的数字键
+          int_keys.flatten.each do |key|
+            json.gsub!("#{key}:", "\"#{key}\":")
+          end
+        end
+        return ActiveSupport::JSON.decode(json)
+      end
     else
+      puts html
       puts "模板变更需要调整：#{request.url}"
     end
     nil

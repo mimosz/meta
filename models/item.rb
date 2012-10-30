@@ -1,5 +1,4 @@
 # -*- encoding: utf-8 -*-
-require 'pp'
 
 class Item
   include Mongoid::Document
@@ -127,7 +126,18 @@ class Item
     end
 
     def get_total(page_dom)
-      page_dom.at('div.search-result').at('span').text.to_i
+      search_dom = page_dom.at('div.search-result')
+      if search_dom
+        return search_dom.at('span').text.to_i 
+      else
+        items_dom = get_items_dom(page_dom)
+        if items_dom
+          pages = page_dom.at('div.shop-filter').at('span.page-info')
+          total = pages.split('/').last
+          return total * items_dom.count
+        end
+      end
+      0
     end
 
     def init_items(page_dom)
@@ -238,6 +248,14 @@ class Item
       node[:favs_count] = favs_count if favs_count
     end
 
+    def wenrentuan(pay_count, counts, prices) # 万人团，动态价格
+      counts.each_with_index do |count, i|
+        if pay_count > count
+          return prices[i].to_i
+        end
+      end
+    end
+
     def parse_sales(json)
       sales = {}
       if json['isSuccess']
@@ -247,27 +265,23 @@ class Item
         quantity   = root['inventoryDO']['icTotalQuantity']
         skus_count = root['inventoryDO']['skuQuantity'].count
         sales.merge!({ month_num: month_num, quantity: quantity, skus_count: skus_count })
-        prom = root['itemPriceResultDO']['priceInfo']['def']
+        prom = root['itemPriceResultDO']['priceInfo']['def'] # 默认价格体系
         if prom && prom['promPrice']
           prom_type  = prom['promPrice']['type']
           wanrentuan = root['itemPriceResultDO']['wanrentuanInfo']
-          if prom_type == '万人团' && wanrentuan
-            pay_count  = wanrentuan['groupUC'].to_i
-            counts     = wanrentuan['wrtLevelNeedCounts'].reverse
-            prices     = wanrentuan['wrtLevelFinalPrices'].reverse
-            counts.each_with_index do |count, i|
-              if pay_count > count
-                prom_price = (prices[i].to_f / 100).round(2)
-                break
-              end
-            end
+          price      = prom['price'].to_f # 原价
+          # 优惠价
+          prom_price = if prom_type == '万人团' && wanrentuan
+            pay_count  = wanrentuan['groupUC'].to_i                # 当前购买数
+            counts     = wanrentuan['wrtLevelNeedCounts'].reverse  # 购买等级
+            prices     = wanrentuan['wrtLevelFinalPrices'].reverse # 价格等级
+            (wenrentuan(pay_count, counts, prices) / 100)
           else
-            prom_price = prom['promPrice']['price'].to_f
-            price      = prom['price'].to_f
+            prom['promPrice']['price'].to_f
           end
-          sales[:prom_price]     = prom_price
+          sales[:prom_price]     = prom_price.round(2)
           sales[:prom_type]      = prom_type
-          sales[:prom_discount]  = prom_price/price*100
+          sales[:prom_discount]  = prom_price / price * 100
         end
         if root['deliveryDO']['deliverySkuMap']['default'][0]['postage'] = '商家承担运费'
           sales[:post_fee] = true
