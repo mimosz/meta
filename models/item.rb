@@ -221,7 +221,7 @@ class Item
 
     def parse_pic_url(link_dom)
       img_dom = link_dom.at('img')
-      pic_url = img_dom['src'] || img_dom['data-ks-lazyload']
+      pic_url = img_dom['data-ks-lazyload'] || img_dom['src']
       if pic_url
         pic_url.gsub!('_b.jpg', '')
         pic_url.gsub!('_160x160.jpg', '')
@@ -254,6 +254,7 @@ class Item
           return prices[i].to_i
         end
       end
+      return prices[0].to_i
     end
 
     def parse_sales(json)

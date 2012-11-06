@@ -1,11 +1,23 @@
 <% unless @seller.nil? %>
-  <h3><%= link_to @seller.seller_nick, @seller.store_url %></h3>
+  <h3></h3>
+  <ul class='breadcrumb'>
+    <% if @category %>
+      <li><%= link_to @seller.seller_nick, url( :sellers, :show, seller_id: @seller._id ) %><span class='divider'>/</span></li>
+      <% if @category.parent %>
+        <li><%= link_to @category.parent.cat_name, url( :sellers, :show, seller_id: @seller._id, category_id: @category.parent.cat_id ) %><span class='divider'>/</span></li>
+      <% end %>
+      <li class='active'><%= @category.cat_name %></li>
+    <% else %>
+      <li class='active'><%= @seller.seller_nick %></li>
+    <% end %>
+  </ul>
   <table id='items' class='table table-bordered'>
     <thead>
       <tr>
         <th>宝贝ID</th>
         <th>商家编码</th>
         <th>售价</th>
+        <th>快递</th>
         <th>活动</th>
         <th>活动售价</th>
         <th>活动折扣</th>
@@ -17,21 +29,20 @@
         <th>标题</th>
       </tr>
     <thead>
-    <% unless @seller.items.empty? %>
+    <% unless @items.empty? %>
       <tbody>
-      <% @seller.items.each do |item| %>
+      <% @items.each do |item| %>
           <tr>
-            <td><%= item.num_iid %><%= "<span class='label label-warning'>包邮</span>" if item.post_fee %></td>
+            <td><%= item.num_iid %></td>
             <td><%= item.outer_id %></td>
             <td><%= item.price %></td>
+            <td><%= "<span class='label label-warning'>包邮</span>" if item.post_fee %></td>
             <% if item.prom_type %>
               <td><%= item.prom_type %></td>
               <td><%= item.prom_price %></td>
               <td><%= item.prom_discount %>%</td>
             <% else %>
-              <td> N/A </td>
-              <td> N/A </td>
-              <td> N/A </td>
+              <td colspan='3'> &nbsp; </td>
             <% end %>
             <td><%= item.month_num %></td>
             <td><%= item.total_num %></td>
@@ -46,11 +57,13 @@
                 <td><%= distance_of_time_in_words(sale.date) %></td>
                 <td><%= sale.outer_id %></td>
                 <td><%= sale.price %></td>
+                <td><%= "<span class='label label-warning'>包邮</span>" if sale.post_fee %></td>
                 <% if sale.prom_type %>
                   <td><%= sale.prom_type %></td>
                   <td><%= sale.prom_price %></td>
+                  <td><%= sale.prom_discount %>%</td>
                 <% else %>
-                  <td colspan='2'> -- </td>
+                  <td colspan='3'> &nbsp; </td>
                 <% end %>
                 <td><%= sale.month_num %></td>
                 <td><%= sale.total_num %></td>

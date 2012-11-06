@@ -18,13 +18,13 @@
               <ul class='nav nav-list'>
                 <% seller.category_parents.each do |category| %>
                   <% unless category.children.empty? %>
-                    <li id='<%= category.cat_id %>' class='nav-header'><%= link_to category.cat_name, '#' %></li>
+                    <li id='<%= category.cat_id %>' class='nav-header'><%= link_to category.cat_name, url( :sellers, :show, seller_id: seller._id, category_id: category.cat_id ) %></li>
                     <% category.children.each do |child| %>
-                      <li id='<%= child.cat_id %>'><%= link_to '<i class="icon-chevron-right"></i>' + child.cat_name, '#' %></li>
+                      <li id='<%= child.cat_id %>'><%= link_to '<i class="icon-chevron-right"></i>' + child.cat_name, url( :sellers, :show, seller_id: seller._id, category_id: child.cat_id ) %></li>
                     <% end %>
                     <li class='divider'></li>
                   <% else %>
-                    <li id='<%= category.cat_id %>'><%= link_to category.cat_name, '#' %></li>
+                    <li id='<%= category.cat_id %>'><%= link_to category.cat_name, url( :sellers, :show, seller_id: seller._id, category_id: category.cat_id ) %></li>
                   <% end %>
                 <% end %>
               </ul>

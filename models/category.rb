@@ -8,6 +8,7 @@ class Category
   has_and_belongs_to_many :items
   has_many   :children, foreign_key: 'parent_id', class_name: 'Category'
   belongs_to :seller,   foreign_key: 'seller_nick'
+  belongs_to :parent,   foreign_key: 'parent_id', class_name: 'Category'
 
   # Fields
   field :cat_id,      type: Integer
@@ -29,32 +30,107 @@ class Category
   end
 
   class << self
+    def each_create(seller, cats)
+      cats.each do |cat|
+        current_cat = where(_id: cat[:cat_id].to_i).last
+        if current_cat
+          current_cat.update_attributes(cat) if current_cat.check?(cat)
+        else
+          current_cat = seller.categories.create(cat)
+        end
+      end
+    end
     
     def sync(seller, page_dom)
       cats_dom = get_cats_dom(page_dom)
-      if cats_dom
-        cats = each_cats(cats_dom)
-        unless cats.empty?
-          cat_ids = []
-          cats.each do |cat|
-            current_cat = where(_id: cat[:cat_id].to_i).last
-            if current_cat
-              current_cat.update_attributes(cat) if current_cat.check?(cat)
-            else
-              current_cat = seller.categories.create(cat)
-            end
-          end
-          return true
-        end
+
+      cats = if cats_dom # 淘宝系统，树形分类
+        each_cats(cats_dom)              
+      else # 自定义分类
+        puts "店铺，自定义分类"
+        get_cats(page_dom)
       end
-      false
+
+      if cats.nil? || cats.empty?
+        puts "错大发了~~"
+        return false
+      else
+        each_create(seller, cats)
+        return true
+      end
     end
 
     private
 
-    def get_cats_dom(page_dom)
+    def ocr_chn(url) # 解析图片上文字
+      img     = MiniMagick::Image.open(url)
+      img.resize '160%'
+      img.colorspace("GRAY") # 灰度化 
+      str     = RTesseract.new(img.path, lang: 'chi_sim').to_s.strip # 识别
+      chinese = str.match(/(\p{Han}+)/)
+      str = if chinese
+        chinese[1] 
+      else
+        url
+      end
+      File.unlink(img.path)  # 删除临时文件
+      return str
+    end
+
+    def find_cat(link)
+      href = link[:href]
+      if href.nil?
+        puts '跳过，锚'
+      else
+        params = URI.parse(href.strip).query || nil
+        if params.nil?
+          puts '跳过，无参数链接'
+        else
+          params = CGI.parse(params)
+          if params.has_key?('scid') # 分类链接
+            cat_id = params['scid'].first
+            if params.has_key?('scname')
+              cat_name = Base64.decode64(URI.unescape(params['scname'].first )).force_encoding("GB18030").encode("UTF-8") # 淘宝分类链接，名称编码解析
+            else # 链接参数中，不带名称
+              cat_name = link.text
+              if cat_name.blank? # 无文字，找图片文字
+                img = link.at('img')
+                if img
+                  text = img['alt']
+                  cat_name = if text.blank?
+                    url  = img['data-ks-lazyload'] || img['src']
+                    text = ocr_chn(url) # 解析图片上的文字
+                  else
+                    text
+                  end
+                else
+                  cat_name = '未知分类'  
+                end
+              end
+            end
+            return { cat_id: cat_id, cat_name: cat_name,  }
+          end
+        end
+      end
+    rescue URI::InvalidURIError
+      nil
+    end
+
+    def get_cats(page_dom) # 自定义分类
+      links = page_dom.css('a')
+      cats = []
+      links.each do |link|
+        cat = find_cat(link)
+        cats << cat if cat
+      end
+      return cats
+    end
+
+    def get_cats_dom(page_dom) # 淘宝系统，树形分类
       page_dom.at('ul#J_Cats').css('li.cat') if page_dom.at('ul#J_Cats')
     end
+
+
 
     def parse_cat(cat_dom, priority, parent_id)
       { cat_id: parse_id(cat_dom[:id]), priority: priority, cat_name: parse_name(cat_dom.at('a')), parent_id: parent_id }
