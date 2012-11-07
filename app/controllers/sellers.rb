@@ -9,11 +9,15 @@ Meta.controllers :sellers do
   
   get :show, :with => :seller_id do
     @seller = Seller.where(_id: params[:seller_id].force_encoding('utf-8')).last
-    if params[:category_id].blank?
-      @items    = @seller.items
+    case
+    when !params[:category_id].blank?
+      @category = @seller.categories.where(_id: params[:category_id]).last
+      @items    = @category.items.includes(:campaigns, :categories)
+    when !params[:campaign_id].blank?
+      @campaign = @seller.campaigns.where(_id: params[:campaign_id].force_encoding('utf-8')).last
+      @items    = @campaign.items.includes(:campaigns, :categories)
     else
-      @category = @seller.categories.where(_id: params[:category_id].force_encoding('utf-8')).last
-      @items    = @category.items
+      @items    = @seller.items.includes(:campaigns, :categories)
     end
     render 'sellers/show'
   end

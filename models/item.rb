@@ -9,9 +9,14 @@ class Item
       only(:cat_name).distinct(:cat_name)
     end
   end
+  has_and_belongs_to_many :campaigns  do # 大促
+    def campaigning(date = Date.today )
+      where(:end_at.gte => date)
+    end
+  end
 
-  embeds_many :sales,  class_name:  'ItemSale'
-  belongs_to  :seller, foreign_key: 'seller_nick'
+  embeds_many :sales,   class_name:  'ItemSale'
+  belongs_to  :seller,  foreign_key: 'seller_nick'
 
   # Fields
   field :num_iid,     type: Integer
@@ -21,9 +26,10 @@ class Item
   field :title,       type: String
   field :pic_url,     type: String
 
-  field :prom_type,   type: String
+  field :prom_type,     type: String
 
   field :price,         type: Float,   default: 0
+  field :tag_price,     type: Float,   default: 0
   field :prom_price,    type: Float,   default: -> { price }
   field :prom_discount, type: Integer, default: 100
 
@@ -77,7 +83,8 @@ class Item
       @pages    = 0
       @seller   = seller
       @crawler  = Crawler.new(seller.store_url)
-      @category = nil
+      @category = nil # 分类
+      @campaign = nil # 大促
 
       if page_dom
         puts "没有店铺类目。"
@@ -179,15 +186,17 @@ class Item
           # 取值完毕，开始操作数据库
           current_item = where(_id: item[:num_iid].to_i).last
           if current_item
+            # 分类
             if @category && !current_item.category_ids.include?(@category.cat_id)
               current_item.categories << @category
               current_item.save
             end
-            if current_item.updated_at.to_date < Date.today
+            last_sale = current_item.sales.last
+            if current_item.updated_at.to_date > Date.today && (last_sale.nil? || last_sale.date > Date.today)
               set_item_sales(item)
               sale = current_item.diff(item)
-
-              current_item.sales << ItemSale.new(sale)
+              current_item.sales     << ItemSale.new(sale)
+              current_item.campaigns << @campaign if @campaign
               current_item.update_attributes(item)
             else
               puts "跳过，重复计算。"
@@ -195,6 +204,7 @@ class Item
           else
             set_item_sales(item)
             item[:categories] = [@category] if @category
+            item[:campaigns]  = [@campaign] if @campaign
             current_item      = @seller.items.create(item)
           end
         end
@@ -257,8 +267,37 @@ class Item
       return prices[0].to_i
     end
 
+    def to_date(timestamp) # 淘宝，时间戳转换
+      timestamp = timestamp.to_s
+      timestamp = timestamp.to_s[0..9] if timestamp.size > 10
+      return Time.at(timestamp.to_i)
+    end
+
+    def set_campaign(campaign) # 大促
+      start_at    = to_date(campaign['startTime'])
+      end_at      = to_date(campaign['endTime'])
+      seller_nick = @seller._id
+      campaign_id = "#{seller_nick}-#{start_at.to_i}-#{end_at.to_i}"
+      
+      if !@campaign.nil? && @campaign._id == campaign_id
+        return @campaign
+      end
+
+      @campaign = Campaign.where(_id: campaign_id ).last
+      if @campaign.nil?
+        @campaign = Campaign.create({
+           seller_nick: seller_nick,
+              start_at: start_at, 
+                end_at: end_at, 
+                  name: campaign['campaignName'], 
+              discount: (campaign['shopUnderFiftyPOff'] ? 50 : 100),
+                  plan: campaign['promotionPlan']
+        })
+      end
+    end
+
     def parse_sales(json)
-      sales = {}
+      sales  = {}
       if json['isSuccess']
         root = json['defaultModel']
 
@@ -266,23 +305,41 @@ class Item
         quantity   = root['inventoryDO']['icTotalQuantity']
         skus_count = root['inventoryDO']['skuQuantity'].count
         sales.merge!({ month_num: month_num, quantity: quantity, skus_count: skus_count })
-        prom = root['itemPriceResultDO']['priceInfo']['def'] # 默认价格体系
-        if prom && prom['promPrice']
-          prom_type  = prom['promPrice']['type']
-          wanrentuan = root['itemPriceResultDO']['wanrentuanInfo']
-          price      = prom['price'].to_f # 原价
-          # 优惠价
-          prom_price = if prom_type == '万人团' && wanrentuan
-            pay_count  = wanrentuan['groupUC'].to_i                # 当前购买数
-            counts     = wanrentuan['wrtLevelNeedCounts'].reverse  # 购买等级
-            prices     = wanrentuan['wrtLevelFinalPrices'].reverse # 价格等级
-            (wenrentuan(pay_count, counts, prices) / 100)
+
+        item_price = root['itemPriceResultDO']
+        # 默认价格体系
+        prices     = item_price['priceInfo']
+        price_info = prices[prices.keys[0]]
+
+        if price_info && price_info['price']
+          price             = price_info['price'].to_f    # 原价
+          tag_price         = price_info['tagPrice'].to_f # 吊牌价
+          sales[:tag_price] = tag_price
+          # 大促
+          if item_price['campaignInfo']
+            set_campaign(item_price['campaignInfo'])
           else
-            prom['promPrice']['price'].to_f
+            @campaign = nil # 清除，大促信息
           end
+          # 优惠
+          if price_info['promPrice']
+            prom = price_info['promPrice']
+            prom_type  = prom['type']
+            # 优惠价
+            prom_price   = if prom_type == '万人团' && item_price['wanrentuanInfo']
+              wanrentuan = item_price['wanrentuanInfo']
+              pay_count  = wanrentuan['groupUC'].to_i                # 当前购买数
+              counts     = wanrentuan['wrtLevelNeedCounts'].reverse  # 购买等级
+              prices     = wanrentuan['wrtLevelFinalPrices'].reverse # 价格等级
+              (wenrentuan(pay_count, counts, prices) / 100)
+            else
+              prom['price'].to_f  
+            end
+
           sales[:prom_price]     = prom_price.round(2)
           sales[:prom_type]      = prom_type
           sales[:prom_discount]  = prom_price / price * 100
+          end
         end
         if root['deliveryDO']['deliverySkuMap']['default'][0]['postage'] = '商家承担运费'
           sales[:post_fee] = true
