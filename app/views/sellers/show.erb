@@ -59,7 +59,12 @@
             <% end %>
             <td>
               <% if @campaign %>
-                <%= (item.tag_price*(@campaign.discount/100.to_f)).round(2) %>
+
+                <% if @campaign.discount < 100 %>
+                  <%= (item.tag_price*(@campaign.discount/100.to_f)).round(2) %>
+                <% else %>
+                  近30天最低
+                <% end %>
               <% else %>
                 <% unless item.campaigns.campaigning.empty? %>
                   <ul class='nav nav-list'>
