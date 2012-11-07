@@ -183,7 +183,7 @@ class Item
               current_item.categories << @category
               current_item.save
             end
-            if current_item.updated_at.to_date > Date.today
+            if current_item.updated_at.to_date < Date.today
               set_item_sales(item)
               sale = current_item.diff(item)
 
