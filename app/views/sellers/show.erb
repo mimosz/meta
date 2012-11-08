@@ -100,7 +100,8 @@
               <tr class='warning'>
                 <td><%= sale.date %></td>
                 <td><%= sale.outer_id %></td>
-                <td colspan='2'><%= sale.price %></td>
+                <td> &nbsp; </td>
+                <td><%= sale.price %></td>
                 <td><%= "<span class='label label-warning'>包邮</span>" if sale.post_fee %></td>
                 <% if sale.prom_type %>
                   <td><%= sale.prom_type %></td>
@@ -109,12 +110,14 @@
                 <% else %>
                   <td colspan='3'> &nbsp; </td>
                 <% end %>
+                <td> &nbsp; </td>
                 <td><%= sale.month_num %></td>
                 <td><%= sale.total_num %></td>
                 <td><%= sale.quantity %></td>
                 <td><%= sale.favs_count %></td>
                 <td><%= sale.skus_count %></td>
                 <td><%= sale.title %></td>
+                <td> &nbsp; </td>
               </tr>
             <% end %>
           <% end %>
