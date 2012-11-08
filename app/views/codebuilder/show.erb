@@ -1,0 +1,11 @@
+<% unless @items.empty? %>
+  <div style="padding-bottom: 10px; margin: 0px auto; padding-left: 9px; width: 941px; padding-right: 0px; background: url(http://img02.taobaocdn.com/tps/i2/T1az2VXlVXXXawLiDr-8-8.png) #b20000; overflow: hidden; padding-top: 10px">
+    <% @items.each do |item| %>
+      <div style="border-bottom: #e5e5e5 1px solid; padding-bottom: 10px; padding-left: 10px; width: 210px; padding-right: 10px; background: #fff; float: left; overflow: hidden; border-right: #e5e5e5 1px solid; padding-top: 10px">
+        <a href="http://detail.tmall.com/item.htm?id=<%= item['淘宝ID']%>" style="text-align: left; line-height: 18px; display: block; color: #666; text-decoration: none" target="_blank" title="<%= item['标题']%>"><img height="210" src="<%= item['图片']%>" style="display: block" width="210" /><b style="text-align: center; line-height: 19px; background-color: #b9a078; width: 210px; display: block; height: 19px; color: white; overflow: hidden; font-weight: normal; opacity: 0.9">[1111购物狂欢价预告]</b><span style="margin-top: 10px; display: block; height: 18px; overflow: hidden"><%= item['标题']%></span></a>
+        <p style="margin-top: 5px; overflow: hidden">
+          <a href="http://detail.tmall.com/item.htm?id=<%= item['淘宝ID']%>" style="<%= @css %>" target="_blank" title="<%= item['标题']%>"><span style="color: #c00">1111狂欢价:</span> <span class="detailPrice" style="line-height: 36px; display: block; height: 32px; color: #c00; font-size: 22px; overflow: hidden; font-weight: bold"><span style="font-size: 19px; font-weight: bold">￥</span><%= item['价格']%></span> <span style="color: #999; font-size: 12px">专柜价：<span style="font-weight: bold">￥</span><del><%= item['专柜价']%></del></span> </a></p>
+      </div>
+    <% end %>
+  </div>
+<% end %>

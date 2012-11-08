@@ -1,0 +1,42 @@
+<h3>11.11，宝贝页快速调整，Excel模板：</h3>
+<table id='items' class='table table-bordered'>
+  <thead>
+    <tr>
+      <th>淘宝ID</th>
+      <th>价格</th>
+      <th>专柜价</th>
+      <th>标题</th>
+      <th>图片</th>
+    </tr>
+  <thead>
+  <tbody>
+    <tr>
+      <td>16207053280</td>
+      <td>249.5</td>
+      <td>499</td>
+      <td>新百伦男/女款轻便复古跑鞋</td>
+      <td>http://img01.taobaocdn.com/imgextra/i1/520557274/T2J1O1XdpXXXXXXXXX_!!520557274.jpg</td>
+    </tr>
+  </tbody>
+</table>
+<p>别忘了要另存为，文本csv格式哦~~</p>
+<div class="span6 columns">
+  <% form_tag url(:codebuilder, :show), method: 'post', multipart: true, class: 'form-horizontal' do %>
+    <div class="control-group">
+        <label class="control-label" for="level">格式：</label>
+        <div class="btn-group" >
+            <input type="radio" name="type" value="fav" id="fav" />
+            <label class="btn active" for="fav">收藏</label>
+            <input type="radio" name="type" value="pay" id="pay" />
+            <label class="btn" for="pay">购买</label>
+        </div>
+    </div>
+    <div class="control-group">
+      <%= label_tag :csv_file, caption: 'CSV文件：', class: 'control-label' %>
+      <div class="controls">
+        <%= file_field_tag :csv_file, class: 'input-file' %>
+      </div>
+    </div>
+    <div class="form-actions"><%= submit_tag '转码', class:'btn btn-primary' %></div>
+  <% end %>
+</div>
