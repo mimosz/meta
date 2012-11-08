@@ -192,7 +192,7 @@ class Item
               current_item.save
             end
             last_sale = current_item.sales.last
-            if current_item.updated_at.to_date > Date.today && (last_sale.nil? || last_sale.date > Date.today)
+            if current_item.updated_at.to_date < Date.today && (last_sale.nil? || last_sale.date < Date.today)
               set_item_sales(item)
               sale = current_item.diff(item)
               current_item.sales     << ItemSale.new(sale)
