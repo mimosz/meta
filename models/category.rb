@@ -75,6 +75,9 @@ class Category
       end
       File.unlink(img.path)  # 删除临时文件
       return str
+    rescue RTesseract::ConversionError
+      File.unlink(img.path)  # 删除临时文件
+      url
     end
 
     def find_cat(link)

@@ -46,7 +46,7 @@ class Item
   default_scope desc(:favs_count)
 
   def diff(item)
-    sale = { num_iid: num_iid, seller_nick: seller_nick, date: Date.today }
+    sale = { num_iid: num_iid, seller_nick: seller_nick, date: updated_at.to_date }
     # 宝贝信息
     sale[:outer_id]   = item[:outer_id]  unless item[:outer_id]  == outer_id
     sale[:title]      = item[:title]     unless item[:title]     == title
@@ -192,7 +192,7 @@ class Item
               current_item.save
             end
             last_sale = current_item.sales.last
-            if current_item.updated_at.to_date < Date.today && (last_sale.nil? || last_sale.date < Date.today)
+            if current_item.updated_at.to_date < Date.today
               set_item_sales(item)
               sale = current_item.diff(item)
               current_item.sales     << ItemSale.new(sale)
