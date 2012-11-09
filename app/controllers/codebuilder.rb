@@ -19,10 +19,12 @@ Meta.controllers :codebuilder do
         @css = styles[params[:type].to_sym]
         render 'codebuilder/show', layout: false
       else
-        "#{rows.headers.to_s}，必须包含：淘宝ID、标题、图片、价格、专柜价。"
+        flash[:error] = "模板，必须包含：淘宝ID、标题、图片、价格、专柜价。"
+        redirect url(:codebuilder, :index)
       end
     else
-      "#{params[:csv_file][:type]} 不是，Excel的CSV文本格式。"
+      flash[:error] = "#{params[:csv_file][:type]} 不是，Excel的CSV文本格式。"
+      redirect url(:codebuilder, :index)
     end
   end
 
