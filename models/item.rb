@@ -4,19 +4,19 @@ class Item
   include Mongoid::Document
   include Mongoid::Timestamps
   # Referenced
-  has_and_belongs_to_many :categories do
+  has_and_belongs_to_many :categories, index: true do
     def cat_names
       only(:cat_name).distinct(:cat_name)
     end
   end
-  has_and_belongs_to_many :campaigns  do # 大促
+  has_and_belongs_to_many :campaigns, index: true  do # 大促
     def campaigning(date = Date.today )
       where(:end_at.gte => date)
     end
   end
 
-  embeds_many :sales,   class_name:  'ItemSale'
-  belongs_to  :seller,  foreign_key: 'seller_nick'
+  embeds_many :timelines
+  belongs_to  :seller,  foreign_key: 'seller_nick', index: true
 
   # Fields
   field :num_iid,     type: Integer
@@ -29,7 +29,7 @@ class Item
   field :prom_type,     type: String
 
   field :price,         type: Float,   default: 0
-  field :tag_price,     type: Float,   default: 0
+  field :tag_price,     type: Float,   default: -> { price }
   field :prom_price,    type: Float,   default: -> { price }
   field :prom_discount, type: Integer, default: 100
 
@@ -45,32 +45,23 @@ class Item
 
   default_scope desc(:favs_count)
 
-  def diff(item)
-    sale = { num_iid: num_iid, seller_nick: seller_nick, date: updated_at.to_date }
-    # 宝贝信息
-    sale[:outer_id]   = item[:outer_id]  unless item[:outer_id]  == outer_id
-    sale[:title]      = item[:title]     unless item[:title]     == title
-    sale[:pic_url]    = item[:pic_url]   unless item[:pic_url]   == pic_url
-    # 优惠活动
-    if item[:prom_type] 
-      sale[:prom_type]     = item[:prom_type]
-      sale[:prom_price]    = (item[:prom_price].to_f - prom_price).round(2) if item[:prom_price]
-      sale[:prom_discount] = item[:prom_discount] - prom_discount 
-    end
-    # 价格
-    sale[:price]      = (item[:price].to_f - price).round(2)
-    # 销售
-    sale[:total_num]  = item[:total_num] - total_num.to_i
-    sale[:month_num]  = item[:month_num] - month_num.to_i
-    # 库存
-    sale[:quantity]   = item[:quantity].to_i   - quantity
-    sale[:skus_count] = item[:skus_count].to_i - skus_count
-    # 包邮
-    sale[:post_fee]   = item[:post_fee]  unless item[:post_fee] == post_fee
-    # 收藏
-    sale[:favs_count] = item[:favs_count].to_i - favs_count
-
-    return sale
+  def to_timeline
+    {
+      outer_id:      outer_id,
+      title:         title,
+      pic_url:       pic_url,
+      prom_type:     prom_type,
+      price:         price,
+      prom_price:    prom_price,
+      prom_discount: prom_discount,
+      total_num:     total_num,
+      month_num:     month_num,
+      quantity:      quantity,
+      favs_count:    favs_count,
+      skus_count:    skus_count,
+      post_fee:      post_fee,
+      date:          updated_at.to_date
+    }
   end
 
   def item_url
@@ -191,11 +182,9 @@ class Item
               current_item.categories << @category
               current_item.save
             end
-            last_sale = current_item.sales.last
             if current_item.updated_at.to_date < Date.today
               set_item_sales(item)
-              sale = current_item.diff(item)
-              current_item.sales     << ItemSale.new(sale)
+              current_item.timelines << Timeline.new(current_item.to_timeline)
               current_item.campaigns << @campaign if @campaign
               current_item.update_attributes(item)
             else

@@ -1,7 +1,18 @@
+production:
+  sessions:
+    default:
+      database: beta
+      username: howl
+      password: '800622'
+      hosts: 
+        - db.innshine.com:27017
+  options:
+      identity_map_enabled: true
+      skip_version_check: true
 development:
   sessions:
     default:
-      database: meta
+      database: beta
       username: howl
       password: '800622'
       hosts: 

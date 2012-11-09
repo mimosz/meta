@@ -23,7 +23,7 @@ end
 Rails.logger.colorize!
 # ## Configure your I18n
 #
-# I18n.default_locale = :zh_cn
+I18n.default_locale = :zh_cn
 #
 # ## Configure your HTML5 data helpers
 #

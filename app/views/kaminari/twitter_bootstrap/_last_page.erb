@@ -1,0 +1,5 @@
+<% unless current_page.last? %>
+<li class="last next">
+    <%= link_to_unless current_page.last?, I18n.t('views.pagination.last'), url, remote: remote %>
+</li>
+<% end %>

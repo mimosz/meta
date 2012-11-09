@@ -5,18 +5,21 @@ class Seller
   include Mongoid::Document
   include Mongoid::Timestamps # adds created_at and updated_at fields
   # Referenced
-  has_many :categories, foreign_key: 'seller_nick'    # 分类
-  has_many :campaigns, foreign_key: 'seller_nick'  do # 大促
+  # 分类
+  has_many :categories, foreign_key: 'seller_nick', dependent: :delete    
+  # 大促
+  has_many :campaigns, foreign_key: 'seller_nick', dependent: :delete  do 
     def campaigning(date = Date.today )
       where(:end_at.gte => date)
     end
   end
-  has_many :items,      foreign_key: 'seller_nick' do
+  # 宝贝
+  has_many :items, foreign_key: 'seller_nick', dependent: :delete do
     def new_arrivals
-      where(sales: nil)
+      where(timelines: nil)
     end
     def paids(range = Date.today)
-      where(:'sales.month_num'.lt => 0, 'sales.date' => range)
+      where(:'timelines.increment.month_num'.lt => 0, 'timelines.date' => range)
     end
   end
 

@@ -1,27 +1,37 @@
 <% unless @seller.nil? %>
-  <ul class='breadcrumb'>
+<% content_for :header do %>
+<div class='subnav'>
+  <ul class='nav nav-pills'>
     <% case %>
     <% when @category %>
-      <li><%= link_to @seller.seller_nick, url( :sellers, :show, seller_id: @seller._id ) %><span class='divider'>/</span></li>
+      <li><%= link_to @seller.seller_nick, url( :sellers, :show, seller_id: @seller._id ) %></li>
       <% if @category.parent %>
-        <li><%= link_to @category.parent.cat_name, url( :sellers, :show, seller_id: @seller._id, category_id: @category.parent.cat_id ) %><span class='divider'>/</span></li>
+        <li><%= link_to @category.parent.cat_name, url( :sellers, :show, seller_id: @seller._id, category_id: @category.parent.cat_id ) %></li>
       <% end %>
-      <li class='active'><%= @category.cat_name %></li>
+      <li class='active'><a><%= @category.cat_name %></a></li>
     <% when @campaign %>
-      <li><%= link_to @seller.seller_nick, url( :sellers, :show, seller_id: @seller._id ) %><span class='divider'>/</span></li>
-      <li class='active'><%= @campaign.name %></li>
+      <li><%= link_to @seller.seller_nick, url( :sellers, :show, seller_id: @seller._id ) %></li>
+      <li class='active'><a><%= @campaign.name %></a></li>
       <% unless @campaign.plan.nil? %>
         <% @campaign.plan.each do |plan| %>
-          <li><span class='divider'>|</span><%= plan %></li>
+          <li><a><%= plan %></a></li>
         <% end %>
       <% end %>
     <% else %>
-      <li class='active'><%= @seller.seller_nick %></li>
+      <li class='active'><a><%= @seller.seller_nick %></a></li>
     <% end %>
-  </ul>    
-
-  <table id='items' class='table table-bordered'>
+  </ul> 
+  </div>   
+<% end %>
+  <table id='items' class='table table-bordered table-striped table-hover fixed'>
     <thead>
+      <% if @items.total_count > @page_size %>
+        <tr>
+          <td style="text-align:right;" colspan='16'>
+           第 <%= @items.offset_value + 1 %> - <%= @items.offset_value + @page_size %>，共 <%= @items.total_count %>
+          </td>
+        </tr>
+      <% end %>
       <tr>
         <th>宝贝ID</th>
         <th>商家编码</th>
@@ -66,7 +76,7 @@
                   近30天最低
                 <% end %>
               <% else %>
-                <% unless item.campaigns.campaigning.empty? %>
+                <% if item.campaigns.campaigning.exists? %>
                   <ul class='nav nav-list'>
                   <% item.campaigns.campaigning.each do |campaign| %>
                     <li><%= link_to campaign.name, url(:sellers, :show, seller_id: @seller._id, campaign_id: campaign._id) %></li>
@@ -82,7 +92,7 @@
             <td><%= item.skus_count %></td>
             <td><%= link_to item.title, item.item_url %></td>
             <td>
-              <% unless item.categories.empty? %>
+              <% if item.categories.exists? %>
                 <ul class='nav nav-list'>
                   <% item.categories.each do |category| %>
                     <% if @category &&  category._id == @category._id %>
@@ -95,28 +105,28 @@
               <% end %>
             </td>
           </tr>
-          <% unless item.sales.empty? %>
-            <% item.sales.each do |sale| %>
-              <tr class='warning'>
-                <td><%= sale.date %></td>
-                <td><%= sale.outer_id %></td>
+          <% unless item.timelines.nil? %>
+            <% item.timelines.each do |timeline| %>
+              <tr class='success'>
+                <td><%= timeline.date %></td>
+                <td><%= timeline.outer_id %></td>
                 <td> &nbsp; </td>
-                <td><%= sale.price %></td>
-                <td><%= "<span class='label label-warning'>包邮</span>" if sale.post_fee %></td>
-                <% if sale.prom_type %>
-                  <td><%= sale.prom_type %></td>
-                  <td><%= sale.prom_price %></td>
-                  <td><%= sale.prom_discount %>%</td>
+                <td><%= timelines.increment.price %></td>
+                <td><%= "<span class='label label-warning'>包邮</span>" if timeline.post_fee %></td>
+                <% if timeline.prom_type %>
+                  <td><%= timeline.prom_type %></td>
+                  <td><%= timelines.increment.prom_price %></td>
+                  <td><%= timelines.increment.prom_discount %>%</td>
                 <% else %>
                   <td colspan='3'> &nbsp; </td>
                 <% end %>
                 <td> &nbsp; </td>
-                <td><%= sale.month_num %></td>
-                <td><%= sale.total_num %></td>
-                <td><%= sale.quantity %></td>
-                <td><%= sale.favs_count %></td>
-                <td><%= sale.skus_count %></td>
-                <td><%= sale.title %></td>
+                <td><%= timelines.increment.month_num %></td>
+                <td><%= timelines.increment.total_num %></td>
+                <td><%= timelines.increment.quantity %></td>
+                <td><%= timelines.increment.favs_count %></td>
+                <td><%= timelines.increment.skus_count %></td>
+                <td><%= timeline.title %></td>
                 <td> &nbsp; </td>
               </tr>
             <% end %>
@@ -125,8 +135,9 @@
       </tbody>
     <% else %>
       <tr>
-        <td colspan='13'>没货品～～</td>
+        <td colspan='16'>没货品～～</td>
       </tr>
     <% end %>
   </table>
+  <%= paginate @items, theme: 'twitter_bootstrap', window: 4 %>
 <% end %>

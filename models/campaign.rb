@@ -2,8 +2,8 @@
 
 class Campaign
   include Mongoid::Document
-  has_and_belongs_to_many :items
-  belongs_to :seller,   foreign_key: 'seller_nick'
+  has_and_belongs_to_many :items, index: true
+  belongs_to :seller,   foreign_key: 'seller_nick', index: true
 
   # Fields
   field :seller_nick, type: String

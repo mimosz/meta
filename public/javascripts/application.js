@@ -33,6 +33,7 @@
 			  el.tooltip('destroy'); // 修复tooltip
 			  el.replaceWith('<img src=/img/spinner.gif />');
 			});
+
 		 // 浮动菜单效果
 	    var $win = $(window)
 	      , $nav = $('.subnav')

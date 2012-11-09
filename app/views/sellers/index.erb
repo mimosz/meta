@@ -2,6 +2,13 @@
 <h3>店铺列表</h3>
 <table id="sellers" class="table table-bordered">
   <thead>
+    <% if @sellers.total_count > @page_size %>
+      <tr>
+        <td style="text-align:right;" colspan='3'>
+         第 <%= @sellers.offset_value + 1 %> - <%= @sellers.offset_value + @page_size %>，共 <%= @sellers.total_count %>
+        </td>
+      </tr>
+    <% end %>
     <tr>
       <th>店铺名称</th>
       <th>大促</th>
@@ -14,7 +21,7 @@
         <tr>
           <td><%= link_to seller.seller_nick, seller.store_url %></td>
           <td>
-            <% unless seller.campaigns.campaigning.empty? %>
+            <% if seller.campaigns.campaigning.exists? %>
               <ul class='nav nav-list'>
               <% seller.campaigns.campaigning.each do |campaign| %>
                 <li><%= link_to campaign.name, url(:sellers, :show, seller_id: seller._id, campaign_id: campaign._id) %></li>
@@ -32,3 +39,4 @@
     </tr>
   <% end %>
 </table>
+<%= paginate @sellers, theme: 'twitter_bootstrap', window: 4 %>
