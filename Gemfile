@@ -1,16 +1,27 @@
+source :rubygems
 source 'http://ruby.taobao.org/'
 
-# Server requirements
-gem 'thin'
+platforms :ruby do
+  # Server requirements
+  gem 'thin'
+  # Project requirements
+  gem 'yajl-ruby', require: 'yajl'
+  gem 'rtesseract'
+end
+
+platforms :jruby do
+  gem 'jruby-openssl'
+  gem 'jruby-rack'
+  gem 'warbler'
+end
 
 # Project requirements
 gem 'rake'
 gem 'sinatra-flash', require: 'sinatra/flash'
-gem 'yajl-ruby', require: 'yajl'
 gem 'nestful'
 gem 'nokogiri' # 解析HTML
 gem 'mini_magick'
-gem 'rtesseract'
+
 
 # Component requirements
 gem 'erubis', '~> 2.7.0'
