@@ -85,11 +85,11 @@
                 <% end %>
               <% end %>
             </td>
-            <td><%= item.month_num %></td>
-            <td><%= item.total_num %></td>
-            <td><%= item.quantity %></td>
-            <td><%= item.favs_count %></td>
-            <td><%= item.skus_count %></td>
+            <td title='月销量'><%= item.month_num %></td>
+            <td title='总销量'><%= item.total_num %></td>
+            <td title='剩余库存'><%= item.quantity %></td>
+            <td title='收藏数'><%= item.favs_count %></td>
+            <td title='SKU数'><%= item.skus_count %></td>
             <td><%= link_to item.title, item.item_url %></td>
             <td>
               <% if item.categories.exists? %>
@@ -108,24 +108,24 @@
           <% unless item.timelines.nil? %>
             <% item.timelines.each do |timeline| %>
               <tr class='success'>
-                <td><%= timeline.date %></td>
+                <td><%= timeline.synced_at.to_date %></td>
                 <td><%= timeline.outer_id %></td>
                 <td> &nbsp; </td>
-                <td><%= timelines.increment.price %></td>
+                <td><%= timeline.increment.price %></td>
                 <td><%= "<span class='label label-warning'>包邮</span>" if timeline.post_fee %></td>
                 <% if timeline.prom_type %>
                   <td><%= timeline.prom_type %></td>
-                  <td><%= timelines.increment.prom_price %></td>
-                  <td><%= timelines.increment.prom_discount %>%</td>
+                  <td><%= timeline.increment.prom_price %></td>
+                  <td><%= timeline.increment.prom_discount %>%</td>
                 <% else %>
                   <td colspan='3'> &nbsp; </td>
                 <% end %>
                 <td> &nbsp; </td>
-                <td><%= timelines.increment.month_num %></td>
-                <td><%= timelines.increment.total_num %></td>
-                <td><%= timelines.increment.quantity %></td>
-                <td><%= timelines.increment.favs_count %></td>
-                <td><%= timelines.increment.skus_count %></td>
+                <td title='月销量'><%= timeline.increment.month_num %></td>
+                <td title='总销量'><%= timeline.increment.total_num %></td>
+                <td title='剩余库存'><%= timeline.increment.quantity %></td>
+                <td title='收藏数'><%= timeline.increment.favs_count %></td>
+                <td title='SKU数'><%= timeline.increment.skus_count %></td>
                 <td><%= timeline.title %></td>
                 <td> &nbsp; </td>
               </tr>

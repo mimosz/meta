@@ -16,6 +16,6 @@ class Increment
   field :favs_count,    type: Integer
   field :skus_count,    type: Integer
 
-  field :date,          type: Date
-  field :_id,           type: Date, default: -> { date }
+  field :timestamp,     type: Integer
+  field :_id,           type: Integer, default: -> { timestamp }
 end

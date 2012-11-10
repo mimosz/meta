@@ -26,33 +26,34 @@ class Timeline
   field :skus_count,    type: Integer, default: 0
   field :post_fee,      type: Boolean, default: false
 
-  field :date,          type: Date
-  field :_id,           type: Date, default: -> { date }
+  field :synced_at,     type: DateTime
+  field :_id,           type: Date, default: -> { synced_at.to_date }
 
-  after_create do |document| # 创建增量
-    increment = {
-            date: document.date,
-      # 价格
-           price: ( document.price    - document.item.price ).round(2),
-      # 销售
-       total_num: document.total_num  - document.item.total_num,
-       month_num: document.month_num  - document.item.month_num,
-      # 库存
-        quantity: document.quantity   - document.item.quantity,
-      skus_count: document.skus_count - document.item.skus_count,
-      # 收藏
-      favs_count: document.favs_count - document.item.favs_count
-    }
-    # 优惠活动
-    if document.prom_type
-      prom = { 
-           prom_price: (document.prom_price - document.item.prom_price).round(2), 
-        prom_discount: document.prom_discount - document.item.prom_discount
+  def increment_create(current_item)
+    if increment.nil?
+      new_increment    = {
+         timestamp: synced_at.to_i,
+        # 价格
+             price: ( current_item.price  - price ).round(2),
+        # 销售
+         total_num: current_item.total_num  - total_num,
+         month_num: current_item.month_num  - month_num,
+        # 库存
+          quantity: current_item.quantity   - quantity,
+        skus_count: current_item.skus_count - skus_count,
+        # 收藏
+        favs_count: current_item.favs_count - favs_count
       }
-      increment.merge!(prom) 
+      # 优惠活动
+      if current_item.prom_type
+        prom = { 
+             prom_price: (current_item.prom_price - prom_price).round(2), 
+          prom_discount: current_item.prom_discount - prom_discount
+        }
+        new_increment.merge!(prom) 
+      end
+      increment = Increment.new(new_increment)
     end
-    document.increment = Increment.new(increment)
-    document.save
   end
 
 end

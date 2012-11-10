@@ -2,7 +2,6 @@
 
 class Item
   include Mongoid::Document
-  include Mongoid::Timestamps
   # Referenced
   has_and_belongs_to_many :categories, index: true do
     def cat_names
@@ -33,15 +32,17 @@ class Item
   field :prom_price,    type: Float,   default: -> { price }
   field :prom_discount, type: Integer, default: 100
 
-  field :total_num,   type: Integer, default: 0
-  field :month_num,   type: Integer, default: 0
-  field :quantity,    type: Integer, default: 0
+  field :total_num,   type: Integer,  default: 0
+  field :month_num,   type: Integer,  default: 0
+  field :quantity,    type: Integer,  default: 0
 
-  field :favs_count,  type: Integer, default: 0
-  field :skus_count,  type: Integer, default: 0
-  field :post_fee,    type: Boolean, default: false
+  field :favs_count,  type: Integer,  default: 0
+  field :skus_count,  type: Integer,  default: 0
+  field :post_fee,    type: Boolean,  default: false
 
-  field :_id,         type: Integer, default: -> { num_iid }
+  field :synced_at,   type: DateTime, default: -> { Time.now }
+
+  field :_id,         type: Integer,  default: -> { num_iid }
 
   default_scope desc(:favs_count)
 
@@ -60,7 +61,7 @@ class Item
       favs_count:    favs_count,
       skus_count:    skus_count,
       post_fee:      post_fee,
-      date:          updated_at.to_date
+      synced_at:     synced_at
     }
   end
 
@@ -182,9 +183,16 @@ class Item
               current_item.categories << @category
               current_item.save
             end
-            if current_item.updated_at.to_date < Date.today
+            # 内容无变更的update操作，updated_at也不会变更，新增synced_at字段，解决此问题
+            if current_item.synced_at < 45.minutes.ago # 6.hours.ago
+              # 获取销售信息
               set_item_sales(item)
-              current_item.timelines << Timeline.new(current_item.to_timeline)
+              # 创建历史版本
+              timeline = Timeline.new(current_item.to_timeline)
+              # 创建增量，差值
+              timeline.increment_create(current_item)
+              # 绑定属性
+              current_item.timelines << timeline
               current_item.campaigns << @campaign if @campaign
               current_item.update_attributes(item)
             else
@@ -209,7 +217,7 @@ class Item
         title     = item_dom.at('div.desc').at('a').text.strip
         price     = item_dom.at('div.price').at('strong').text[0..-3].to_f
         total_num = item_dom.at('div.sales-amount').at('em').text.to_i
-        return { num_iid: num_iid, outer_id: parse_outer_id(title), total_num: total_num, title: title, pic_url: pic_url, price: price }
+        return { synced_at: Time.now, num_iid: num_iid, outer_id: parse_outer_id(title), total_num: total_num, title: title, pic_url: pic_url, price: price }
       end
       nil
     end
