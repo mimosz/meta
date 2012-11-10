@@ -184,17 +184,17 @@ class Item
               current_item.save
             end
             # 内容无变更的update操作，updated_at也不会变更，新增synced_at字段，解决此问题
-            if current_item.synced_at < 45.minutes.ago # 6.hours.ago
+            if current_item.synced_at < 6.hours.ago
               # 获取销售信息
               set_item_sales(item)
-              # 创建历史版本
+              # 设定历史版本
               timeline = Timeline.new(current_item.to_timeline)
-              # 创建增量，差值
-              timeline.increment_create(current_item)
-              # 绑定属性
-              current_item.timelines << timeline
-              current_item.campaigns << @campaign if @campaign
+              # 更新内容
               current_item.update_attributes(item)
+              # 计算增量信息，必须在update后
+              current_item.campaigns << @campaign if @campaign
+              current_item.timelines << timeline 
+              current_item.save
             else
               puts "跳过，重复计算。"
             end
