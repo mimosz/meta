@@ -18,4 +18,5 @@ class Increment
 
   field :timestamp,     type: Integer
   field :_id,           type: Integer, default: -> { timestamp }
+  
 end

@@ -29,6 +29,8 @@ class Timeline
   field :synced_at,     type: DateTime
   field :_id,           type: Integer, default: -> { synced_at.to_i }
 
+  default_scope desc(:synced_at)
+
   after_create :increment_create
 
   def increment_create
@@ -47,7 +49,7 @@ class Timeline
       favs_count: current_item.favs_count - favs_count
     }
     # 优惠活动
-    if current_item.prom_type
+    if current_item.prom_price > 0 
       prom = { 
            prom_price: (current_item.prom_price - prom_price).round(2), 
         prom_discount: current_item.prom_discount - prom_discount

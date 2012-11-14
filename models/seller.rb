@@ -50,13 +50,15 @@ class Seller
   end
 
   def store_sync(page_dom)
+    timestamp = Time.now.to_i
     if Category.sync(self, page_dom)
       puts "店铺分类数：#{categories.count}"
-      Item.sync(self)
+      Item.sync(self, timestamp)
     else
       puts "没有找到店铺分类。"
-      Item.sync(self, page_dom)
+      Item.sync(self, timestamp, page_dom)
     end
+    Item.recycling(self, timestamp)
   end
 
   class << self

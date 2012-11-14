@@ -39,6 +39,7 @@ class Item
   field :favs_count,  type: Integer,  default: 0
   field :skus_count,  type: Integer,  default: 0
   field :post_fee,    type: Boolean,  default: false
+  field :status,      type: String,   default: -> {'onsale'}  # 商品状态 [ onsale soldout inventory ]
 
   field :synced_at,   type: DateTime, default: -> { Time.now }
 
@@ -71,12 +72,32 @@ class Item
 
   class << self
 
-    def sync(seller, page_dom=nil)
-      @pages    = 0
-      @seller   = seller
-      @crawler  = Crawler.new(seller.store_url)
-      @category = nil # 分类
-      @campaign = nil # 大促
+    def recycling(seller, timestamp)
+      @timestamp = Time.at(timestamp)
+      @seller    = seller
+      @crawler   = Crawler.new(seller.store_url)
+
+      # 设定售罄、下架宝贝
+      seller.items( status: 'onsale', :synced_at.lt => @timestamp ).each do |current_item|
+        item = { num_iid: current_item.num_iid, status: 'inventory', synced_at: @timestamp }
+        # 获取销售信息
+        set_item_sales(item)
+        # 设定历史版本
+        timeline = Timeline.new(current_item.to_timeline)
+        # 更新内容
+        current_item.update_attributes(item)
+        current_item.timelines << timeline 
+        current_item.save
+      end
+    end
+
+    def sync(seller, timestamp, page_dom=nil)
+      @pages     = 0
+      @timestamp = Time.at(timestamp)
+      @seller    = seller
+      @crawler   = Crawler.new(seller.store_url)
+      @category  = nil # 分类
+      @campaign  = nil # 大促
 
       if page_dom
         puts "没有店铺类目。"
@@ -184,7 +205,7 @@ class Item
               current_item.save
             end
             # 内容无变更的update操作，updated_at也不会变更，新增synced_at字段，解决此问题
-            if current_item.synced_at < 6.hours.ago
+            if current_item.synced_at < @timestamp
               # 获取销售信息
               set_item_sales(item)
               # 设定历史版本
@@ -217,7 +238,7 @@ class Item
         title     = item_dom.at('div.desc').at('a').text.strip
         price     = item_dom.at('div.price').at('strong').text[0..-3].to_f
         total_num = item_dom.at('div.sales-amount').at('em').text.to_i
-        return { synced_at: Time.now, num_iid: num_iid, outer_id: parse_outer_id(title), total_num: total_num, title: title, pic_url: pic_url, price: price }
+        return { synced_at: @timestamp, num_iid: num_iid, outer_id: parse_outer_id(title), total_num: total_num, title: title, pic_url: pic_url, price: price }
       end
       nil
     end
@@ -298,9 +319,10 @@ class Item
       if json['isSuccess']
         root = json['defaultModel']
 
-        month_num  = root['sellCountDO']['sellCount']
-        quantity   = root['inventoryDO']['icTotalQuantity']
-        skus_count = root['inventoryDO']['skuQuantity'].count
+        month_num      = root['sellCountDO']['sellCount']
+        quantity       = root['inventoryDO']['icTotalQuantity']
+        skus_count     = root['inventoryDO']['skuQuantity'].count
+        sales[:status] = 'soldout' if quantity == 0 # 售罄
         sales.merge!({ month_num: month_num, quantity: quantity, skus_count: skus_count })
 
         item_price = root['itemPriceResultDO']
