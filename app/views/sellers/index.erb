@@ -29,10 +29,7 @@
               </ul>
             <% end %>
           </td>
-          <td>
-            <%= link_to '在售', url(:sellers, :show, seller_id: seller._id) %><br />
-            <%= link_to '售罄', url(:sellers, :show, seller_id: seller._id, date: 1.day.ago.to_date.to_s) %>
-          </td>
+          <td><%= link_to '全部货品', url(:sellers, :show, seller_id: seller._id) %></td>
         </tr>
       <% end %>
     </tbody>

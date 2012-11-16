@@ -1,4 +1,3 @@
-
 # -*- encoding: utf-8 -*-
 
 class Timeline
@@ -25,6 +24,7 @@ class Timeline
   field :favs_count,    type: Integer, default: 0
   field :skus_count,    type: Integer, default: 0
   field :post_fee,      type: Boolean, default: false
+  field :status,        type: String
 
   field :synced_at,     type: DateTime
   field :_id,           type: Integer, default: -> { synced_at.to_i }
@@ -32,6 +32,19 @@ class Timeline
   default_scope desc(:synced_at)
 
   after_create :increment_create
+
+  def show_status
+    case status
+    when 'onsale'
+      '在售'
+    when 'soldout'
+      '售罄'
+    when 'inventory'
+      '下架'
+    else
+      '未知'
+    end
+  end
 
   def increment_create
     current_item  = self.item

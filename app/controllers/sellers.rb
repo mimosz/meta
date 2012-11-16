@@ -13,23 +13,21 @@ Meta.controllers :sellers do
   
   get :show, with: :seller_id, provides: [:html, :csv] do
     @seller = Seller.where(_id: params[:seller_id].force_encoding('utf-8')).last
-    date    = params[:date].blank? ? Date.today : params[:date].to_date
-    range   = date.beginning_of_day..date.end_of_day
     case content_type
     when :html
       case
       when !params[:category_id].blank?
         @category = @seller.categories.where(_id: params[:category_id]).last
-        @items    = @category.items.where(synced_at: range).includes(:categories).page(@page).per(@page_size)
+        @items    = @category.items.includes(:categories).page(@page).per(@page_size)
       when !params[:campaign_id].blank?
         @campaign = @seller.campaigns.where(_id: params[:campaign_id].force_encoding('utf-8')).last
-        @items    = @campaign.items.where(synced_at: range).includes(:categories).page(@page).per(@page_size)
+        @items    = @campaign.items.includes(:categories).page(@page).per(@page_size)
       else
-        @items    = @seller.items.where(synced_at: range).includes(:categories).page(@page).per(@page_size)
+        @items    = @seller.items.includes(:categories).page(@page).per(@page_size)
       end
       render 'sellers/show'
     when :csv
-      @items    = @seller.items.where(synced_at: range).includes(:categories)
+      @items    = @seller.items.includes(:categories)
       if @items.empty?
           flash[:error] = '哦，人品大爆发，没宝贝~'
           redirect url(:sellers, :index)

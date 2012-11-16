@@ -7,7 +7,7 @@ Meta.helpers do
     file_csv = File.join(file_tag)
     return file_csv if File.exist?(file_csv)
     unless items.empty?
-      header_row = ['淘宝ID', '商家编码', '促销活动', '促销价格', '价格', '月销量', '总销量', '库存', '收藏数', 'SKU数', '标题', '图片地址']
+      header_row = ['淘宝ID', '商家编码', '促销活动', '促销价格', '价格', '月销量', '总销量', '库存', '收藏数', 'SKU数', '销售状态', '标题', '图片地址']
       CSV.open(file_tag, "wb:GB18030", col_sep: ',') do |csv|
       csv << header_row
         items.each do |item|
@@ -22,6 +22,7 @@ Meta.helpers do
           item.quantity,    
           item.favs_count, 
           item.skus_count, 
+          item.show_status,
           item.title,      
           item.pic_url, 
           ]

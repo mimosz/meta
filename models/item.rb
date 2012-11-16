@@ -45,6 +45,8 @@ class Item
 
   field :_id,         type: Integer,  default: -> { num_iid }
 
+  scope :onsale, where(status: 'onsale')
+
   default_scope desc(:favs_count)
 
   def to_timeline
@@ -62,8 +64,20 @@ class Item
       favs_count:    favs_count,
       skus_count:    skus_count,
       post_fee:      post_fee,
+      status:        status,
       synced_at:     synced_at
     }
+  end
+
+  def show_status
+    case status
+    when 'onsale'
+      '在售'
+    when 'soldout'
+      '售罄'
+    when 'inventory'
+      '下架'
+    end
   end
 
   def item_url
@@ -78,17 +92,26 @@ class Item
       @crawler   = Crawler.new(seller.store_url)
 
       # 设定售罄、下架宝贝
-      seller.items( status: 'onsale', :synced_at.lt => @timestamp ).each do |current_item|
-        item = { num_iid: current_item.num_iid, status: 'inventory', synced_at: @timestamp }
-        # 获取销售信息
-        set_item_sales(item)
-        # 设定历史版本
-        timeline = Timeline.new(current_item.to_timeline)
-        # 更新内容
-        current_item.update_attributes(item)
-        current_item.timelines << timeline 
-        current_item.save
+      items = seller.items.where( status: 'onsale', :synced_at.lt => @timestamp )
+      if items.empty?
+        puts "暂无，售罄、下架宝贝。"
+      else
+        items.each do |current_item|
+          puts current_item.synced_at
+          puts current_item.show_status
+          # item = { num_iid: current_item.num_iid, status: 'inventory', synced_at: @timestamp }
+          # # 获取销售信息
+          # set_item_sales(item)
+          # # 设定历史版本
+          # timeline = Timeline.new(current_item.to_timeline)
+          # # 更新内容
+          # current_item.update_attributes(item)
+          # current_item.timelines << timeline 
+          # current_item.save
+        end
+        puts "同步：售罄、下架宝贝。"
       end
+      puts "同步批次号：#{timestamp}。"
     end
 
     def sync(seller, timestamp, page_dom=nil)
@@ -121,8 +144,10 @@ class Item
               puts "店铺分类：#{category.cat_name}"
             end
           end
+          puts "同步：店铺分类下宝贝。"
         end
       end
+      puts "同步批次号：#{timestamp}。"
     end
 
     private
@@ -238,7 +263,7 @@ class Item
         title     = item_dom.at('div.desc').at('a').text.strip
         price     = item_dom.at('div.price').at('strong').text[0..-3].to_f
         total_num = item_dom.at('div.sales-amount').at('em').text.to_i
-        return { synced_at: @timestamp, num_iid: num_iid, outer_id: parse_outer_id(title), total_num: total_num, title: title, pic_url: pic_url, price: price }
+        return { status: 'onsale', synced_at: @timestamp, num_iid: num_iid, outer_id: parse_outer_id(title), total_num: total_num, title: title, pic_url: pic_url, price: price }
       end
       nil
     end
