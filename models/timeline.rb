@@ -27,11 +27,20 @@ class Timeline
   field :status,        type: String
 
   field :synced_at,     type: DateTime
+  field :duration,      type: Integer, default: 0
   field :_id,           type: Integer, default: -> { synced_at.to_i }
 
   default_scope desc(:synced_at)
 
   after_create :increment_create
+
+  def sales
+    if increment.total_num > 0 
+      (increment.total_num * prom_price).round(2) 
+    else
+      0
+    end
+  end
 
   def show_status
     case status
@@ -59,7 +68,7 @@ class Timeline
         quantity: current_item.quantity   - quantity,
       skus_count: current_item.skus_count - skus_count,
       # 收藏
-      favs_count: current_item.favs_count - favs_count
+      favs_count: current_item.favs_count - favs_count,
     }
     # 优惠活动
     if current_item.prom_price > 0 

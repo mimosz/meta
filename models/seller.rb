@@ -4,13 +4,18 @@ require 'pp'
 class Seller
   include Mongoid::Document
   include Mongoid::Timestamps # adds created_at and updated_at fields
+  embeds_many :sales,     as: :saleable, class_name: 'Sale'
+  embeds_one  :last_sale, as: :saleable, class_name: 'Sale'
   # Referenced
   # 分类
   has_many :categories, foreign_key: 'seller_nick', dependent: :delete    
   # 大促
   has_many :campaigns, foreign_key: 'seller_nick', dependent: :delete  do 
-    def campaigning(date = Date.today )
-      where(:end_at.gte => date)
+    def precampaigning(time = Time.now )
+      where(:end_at.gte => time)
+    end
+    def campaigning(time)
+      where(:start_at.lte => time, :end_at.gte => time)
     end
   end
   # 宝贝
@@ -37,14 +42,6 @@ class Seller
     categories.where(parent_id: nil)
   end
 
-  # def item_arrivals
-  #   items.not_in(_id: Sale.where( seller_nick: _id).only(:num_iid).distinct(:num_iid))
-  # end
-
-  # def item_paids(range = Date.today)
-  #   items.where(:_id.in => Sale.where( seller_nick: _id, :month_num.lt => 0, date: range).only(:num_iid).distinct(:num_iid))
-  # end
-
   def sync
     Seller.sync(store_url)
   end
@@ -58,7 +55,10 @@ class Seller
       puts "没有找到店铺分类。"
       Item.sync(self, timestamp, page_dom)
     end
+    # 
     Item.recycling(self, timestamp)
+    #
+    Sale.sync(self, timestamp)
   end
 
   class << self

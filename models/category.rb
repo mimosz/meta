@@ -4,6 +4,8 @@ require 'digest/md5'
 class Category
   include Mongoid::Document
   include Mongoid::Timestamps # adds created_at and updated_at fields
+  embeds_many :sales,     as: :saleable, class_name: 'Sale'
+  embeds_one  :last_sale, as: :saleable, class_name: 'Sale'
   # Referenced
   has_and_belongs_to_many :items, index: true
   has_many   :children, foreign_key: 'parent_id', class_name: 'Category'

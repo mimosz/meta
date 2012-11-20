@@ -5,9 +5,12 @@
 # just execute it from the command line.
 
 require File.expand_path("../config/boot.rb", __FILE__)
+require 'resque_scheduler'
+require 'resque_scheduler/server'
 
 run Rack::URLMap.new \
-  '/'       => Padrino.application
+  '/'       => Padrino.application,
+  '/resque' => Resque::Server.new
 
 memory_usage = (`ps -o rss= -p #{$$}`.to_i / 1024.00).round(2)
 puts "=> Memory usage: #{memory_usage} Mb"

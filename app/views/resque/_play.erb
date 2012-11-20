@@ -1,0 +1,7 @@
+<tr id="<%= @resque_id %>" class="success">
+  <td><%= @queue[:description] %></td>
+  <td><%= interval(@queue) %></td>
+  <td>
+    <%= link_to "<i class='icon-pause'></i>", url(:resque, :pause, seller_id: @seller._id, resque_id: @resque_id, format: :js), remote: true, rel: "tooltip", 'data-original-title' => "停止" %>
+  </td>
+</tr>

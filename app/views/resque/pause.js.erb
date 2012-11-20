@@ -1,0 +1,5 @@
+$("#<%= @resque_id %>").fadeOut('slow', function(){
+  var el = $(this);
+  el.replaceWith('<%= js_escape_html( partial 'resque/pause' ) %>');
+  el.fadeIn('slow');
+});

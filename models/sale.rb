@@ -2,43 +2,125 @@
 
 class Sale
   include Mongoid::Document
-  include Mongoid::Timestamps # adds created_at and updated_at fields
-  has_and_belongs_to_many :props
-  belongs_to :item,   foreign_key: 'num_iid'
+  belongs_to :saleable, polymorphic: true
 
 
   # Fields
-  field :num_iid,     type: Integer
   field :seller_nick, type: String
 
-  field :outer_id,    type: String
-  field :title,       type: String
-  field :pic_url,     type: String
+  field :onsales,     type: Array,   default: [] # 在售
+  field :soldouts ,   type: Array,   default: [] # 售罄
+  field :inventories, type: Array,   default: [] # 下架
+  field :proms,       type: Array,   default: [] # 活动
 
-  field :prom_type,   type: String
+  field :sales,       type: Float,   default: 0
+  field :volume,      type: Integer, default: 0
 
-  field :price,       type: Float,   default: 0
-  field :prom_price,  type: Float
-
-  field :total_num,   type: Integer, default: 0
-  field :month_num,   type: Integer, default: 0
   field :quantity,    type: Integer, default: 0
-
   field :favs_count,  type: Integer, default: 0
   field :skus_count,  type: Integer, default: 0
 
-  field :date,      type: Date
+  field :duration,    type: Integer, default: 0
+  field :synced_at,   type: DateTime
 
-  default_scope desc(:date)
+  field :_id,         type: Integer, default: -> { synced_at.to_i }
+
+  default_scope desc(:synced_at)
 
   class << self
-    def sync(item)
-      last_sale = where(num_iid: item[:num_iid].to_i, date: item[:date]).last
-      if last_sale
-        return false
-      else
-        create(item)
-        return true
+
+    def sync(seller, timestamp)
+      synced_at   = Time.at(timestamp)
+      seller_nick = seller._id
+      #
+      default     = nil
+      #
+      seller_sales   = nil
+      campaign_sales = {}
+      category_sales = {}
+
+      items     = seller.items.where('timelines._id' => timestamp)
+      unless items.empty?
+        # 
+        items.each do |item|
+          timeline = item.timelines.where(_id: timestamp).first
+          if timeline
+            # 
+            if default.nil?
+              #
+              default    = { seller_nick: seller_nick, synced_at: synced_at, duration: timeline.duration }
+              #
+              seller_sales   = seller.sales.new(default)
+              #
+              sales_new(campaign_sales, seller.campaigns.campaigning(synced_at), default)
+              sales_new(category_sales, seller.categories, default)
+            end
+            # 
+            sales_sum(seller_sales, timeline)
+            #
+            sales_set(category_sales, item.category_ids, timeline) 
+            # 
+            sales_set(campaign_sales, item.campaign_ids, timeline) 
+          end
+        end
+        # 
+        unless default.nil?
+          seller_sales.save if seller_sales
+          # 
+          sales_save(category_sales)
+          # 
+          sales_save(campaign_sales)
+        end
+      end
+    end
+
+    private
+
+    def sales_sum(sales, sale)
+      # 
+      case sale.status
+      when 'onsale'
+        sales.onsales     << sale._id
+      when 'soldout'
+        sales.soldouts    << sale._id
+      when 'inventory'
+        sales.inventories << sale._id
+      end
+      # 
+      unless sale.prom_type.nil?
+        sales.proms << sale.prom_type unless sales.proms.include?(sale.prom_type)
+      end
+      # 
+      sales.sales  += sale.sales
+      sales.volume += sale.increment.total_num
+      # 
+      sales.quantity   += sale.quantity
+      sales.favs_count += sale.favs_count
+      sales.skus_count += sale.skus_count
+      # return sales
+    end
+
+    def sales_new(node, objs, vals)
+      unless objs.empty?
+        objs.each do |obj|
+          node[obj._id] = obj.sales.new(vals)
+        end
+      end
+    end
+
+    def sales_set(node, objs, vals)
+      unless objs.empty?
+        objs.each do |obj|
+          sales_sum(node[obj], vals) if node.has_key?(obj)
+        end
+      end
+    end
+
+    def sales_save(node)
+      unless node.empty?
+        node.each do |id, sale|
+          sale.save
+        end
       end
     end
   end

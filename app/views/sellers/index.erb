@@ -21,15 +21,18 @@
         <tr>
           <td><%= link_to seller.seller_nick, seller.store_url %></td>
           <td>
-            <% if seller.campaigns.campaigning.exists? %>
+            <% if seller.campaigns.precampaigning.exists? %>
               <ul class='nav nav-list'>
-              <% seller.campaigns.campaigning.each do |campaign| %>
+              <% seller.campaigns.precampaigning.each do |campaign| %>
                 <li><%= link_to campaign.name, url(:sellers, :show, seller_id: seller._id, campaign_id: campaign._id) %></li>
               <% end %>
               </ul>
             <% end %>
           </td>
-          <td><%= link_to '全部货品', url(:sellers, :show, seller_id: seller._id) %></td>
+          <td>
+            <%= link_to '全部货品', url(:sellers, :show, seller_id: seller._id) %>
+            <%= link_to "<i class='icon-time'></i>", url(:resque, :index, seller_id: seller._id) %>
+          </td>
         </tr>
       <% end %>
     </tbody>

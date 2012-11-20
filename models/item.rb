@@ -49,7 +49,7 @@ class Item
 
   default_scope desc(:favs_count)
 
-  def to_timeline
+  def to_timeline(timestamp = Time.now.to_i)
     {
       outer_id:      outer_id,
       title:         title,
@@ -65,7 +65,9 @@ class Item
       skus_count:    skus_count,
       post_fee:      post_fee,
       status:        status,
-      synced_at:     synced_at
+      synced_at:     synced_at,
+      # 小时
+      duration: (timestamp - synced_at.to_i) / 3600
     }
   end
 
@@ -97,17 +99,15 @@ class Item
         puts "暂无，售罄、下架宝贝。"
       else
         items.each do |current_item|
-          puts current_item.synced_at
-          puts current_item.show_status
-          # item = { num_iid: current_item.num_iid, status: 'inventory', synced_at: @timestamp }
-          # # 获取销售信息
-          # set_item_sales(item)
-          # # 设定历史版本
-          # timeline = Timeline.new(current_item.to_timeline)
-          # # 更新内容
-          # current_item.update_attributes(item)
-          # current_item.timelines << timeline 
-          # current_item.save
+          item = { num_iid: current_item.num_iid, status: 'inventory', synced_at: @timestamp }
+          # 获取销售信息
+          set_item_sales(item)
+          # 设定历史版本
+          timeline = Timeline.new(current_item.to_timeline(timestamp))
+          # 更新内容
+          current_item.update_attributes(item)
+          current_item.timelines << timeline 
+          current_item.save
         end
         puts "同步：售罄、下架宝贝。"
       end
@@ -234,7 +234,7 @@ class Item
               # 获取销售信息
               set_item_sales(item)
               # 设定历史版本
-              timeline = Timeline.new(current_item.to_timeline)
+              timeline = Timeline.new(current_item.to_timeline(@timestamp.to_i))
               # 更新内容
               current_item.update_attributes(item)
               # 计算增量信息，必须在update后

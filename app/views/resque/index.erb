@@ -1,0 +1,33 @@
+<% content_for :lead do %>任务管理器<% end %>
+<div class='span12 columns'>
+  
+  <table class="table table-bordered">
+    <thead>
+      <tr>
+        <th>任务</th>
+        <th>计划</th>
+        <th>状态</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @queues.each do |queue_id, queue| %>
+        <% status = queue_status(queue_id) %>
+        <tr id="<%= queue_id %>" class="<%= status.to_s %>">
+          <td><%= queue[:description] %></td>
+          <td><%= interval(queue) %></td>
+          <td>
+            <% if status %>
+              <%= link_to "<i class='icon-pause'></i>", url(:resque, :pause, seller_id: @seller._id, resque_id: queue_id, format: 'js'), remote: true, rel: 'tooltip', 'data-original-title' => '停止' %>
+            <% else %>
+              <%= link_to "<i class='icon-play'></i>", url(:resque, :play, seller_id: @seller._id, resque_id: queue_id, format: 'js'), remote: true, rel: 'tooltip', 'data-original-title' => '开启' %>
+            <% end %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+  <dl class="dl-horizontal">
+    <dt>队列，使用率：</dt>
+    <dd><%= worker_status %></dd>
+  </dl>
+</div>

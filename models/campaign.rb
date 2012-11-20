@@ -2,6 +2,9 @@
 
 class Campaign
   include Mongoid::Document
+  embeds_many :sales,     as: :saleable, class_name: 'Sale'
+  embeds_one  :last_sale, as: :saleable, class_name: 'Sale'
+  
   has_and_belongs_to_many :items, index: true
   belongs_to :seller,   foreign_key: 'seller_nick', index: true
 
