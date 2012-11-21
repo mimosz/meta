@@ -21,9 +21,9 @@
         <tr>
           <td><%= link_to seller.seller_nick, seller.store_url %></td>
           <td>
-            <% if seller.campaigns.precampaigning.exists? %>
+            <% if seller.campaigns.pre.exists? %>
               <ul class='nav nav-list'>
-              <% seller.campaigns.precampaigning.each do |campaign| %>
+              <% seller.campaigns.pre.each do |campaign| %>
                 <li><%= link_to campaign.name, url(:sellers, :show, seller_id: seller._id, campaign_id: campaign._id) %></li>
               <% end %>
               </ul>

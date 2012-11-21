@@ -18,4 +18,8 @@ class Campaign
   field :plan,     type: Array
 
   field :_id,      type: String, default: -> { "#{seller_nick}-#{start_at.to_i}-#{end_at.to_i}" }
+
+  scope :pre, ->(time = Time.now){ where(:end_at.gte => time) }
+  scope :ing, ->(time = Time.now){ where(:start_at.lte => time, :end_at.gte => time) }
+
 end

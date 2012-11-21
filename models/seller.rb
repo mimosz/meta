@@ -10,14 +10,7 @@ class Seller
   # 分类
   has_many :categories, foreign_key: 'seller_nick', dependent: :delete    
   # 大促
-  has_many :campaigns, foreign_key: 'seller_nick', dependent: :delete  do 
-    def precampaigning(time = Time.now )
-      where(:end_at.gte => time)
-    end
-    def campaigning(time)
-      where(:start_at.lte => time, :end_at.gte => time)
-    end
-  end
+  has_many :campaigns, foreign_key: 'seller_nick', dependent: :delete
   # 宝贝
   has_many :items, foreign_key: 'seller_nick', dependent: :delete do
     def new_arrivals

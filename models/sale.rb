@@ -52,7 +52,7 @@ class Sale
               #
               seller_sales   = seller.sales.new(default)
               #
-              sales_new(campaign_sales, seller.campaigns.campaigning(synced_at), default)
+              sales_new(campaign_sales, seller.campaigns.ing(synced_at), default)
               sales_new(category_sales, seller.categories, default)
             end
             # 

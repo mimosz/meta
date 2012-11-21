@@ -72,9 +72,9 @@
                   近30天最低
                 <% end %>
               <% else %>
-                <% if item.campaigns.precampaigning.exists? %>
+                <% if item.campaigns.pre.exists? %>
                   <ul class='nav nav-list'>
-                  <% item.campaigns.precampaigning.each do |campaign| %>
+                  <% item.campaigns.pre.each do |campaign| %>
                     <li><%= link_to campaign.name, url(:sellers, :show, seller_id: @seller._id, campaign_id: campaign._id) %></li>
                   <% end %>
                   </ul>

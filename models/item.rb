@@ -8,11 +8,7 @@ class Item
       only(:cat_name).distinct(:cat_name)
     end
   end
-  has_and_belongs_to_many :campaigns, index: true  do # 大促
-    def campaigning(date = Date.today )
-      where(:end_at.gte => date)
-    end
-  end
+  has_and_belongs_to_many :campaigns, index: true # 大促
 
   embeds_many :timelines
   belongs_to  :seller,  foreign_key: 'seller_nick', index: true
