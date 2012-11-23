@@ -12,7 +12,7 @@ Meta.controllers :sellers do
   end
 
   post :create do
-    result = Seller.sync(params[:account][:store_url])
+    result = Seller.sync(params[:seller][:store_url])
     if result.nil?
       flash[:error] = '非常抱歉，您提供的店铺地址，系统未能识别~'
       redirect url(:sellers, :index)
