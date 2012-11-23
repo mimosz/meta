@@ -1,4 +1,4 @@
-<% form_for :seller, url(:sellers, :create), class: 'form-inline' style: 'text-align: center;' do |f| %>
+<% form_for :seller, url(:sellers, :create), class: 'form-inline', style: 'text-align: center;' do |f| %>
   <div class='input-append'>
     <%= f.text_field :store_url, placeholder: 'http://newbalance.tmall.com' %>
     <%= f.submit '添加店铺', class:'btn btn-warning' %>
