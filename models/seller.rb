@@ -1,5 +1,4 @@
 # -*- encoding: utf-8 -*-
-require 'pp'
 
 class Seller
   include Mongoid::Document
@@ -29,15 +28,20 @@ class Seller
 
   field :seller_nick, type: String
   field :store_url,   type: String
-  field :synced_at,   type: DateTime, default: -> { Time.now } # 店铺同步时间
-  field :_id,         type: String,   default: -> { seller_nick }
+  field :synced_at,   type: DateTime # 店铺同步时间
+  field :_id,         type: String,  default: -> { seller_nick }
 
   def category_parents
     categories.where(parent_id: nil)
   end
 
   def sync
-    Seller.sync(store_url)
+    @crawler = Crawler.new(store_url)
+    @crawler.item_search_url
+    page_dom = @crawler.get_dom # 获取页面对象
+    return nil if page_dom.nil?
+    logger.info "更新，#{seller_nick}店铺数据。"
+    store_sync(page_dom) 
   end
 
   def store_sync(page_dom)
@@ -45,10 +49,10 @@ class Seller
     timestamp  = syncing_at.to_i
     
     if Category.sync(self, page_dom)
-      puts "店铺分类数：#{categories.count}"
+      logger.info "店铺分类数：#{categories.count}。"
       Item.sync(self, timestamp)
     else
-      puts "没有找到店铺分类。"
+      logger.warn "没有找到店铺分类。"
       Item.sync(self, timestamp, page_dom)
     end
     # 下架或售罄同步
@@ -64,26 +68,28 @@ class Seller
     def sync(store_url)
       @crawler = Crawler.new(store_url)
       @crawler.item_search_url
+      page_dom = @crawler.get_dom # 获取页面对象
+      return nil if page_dom.nil? # 非法地址
 
-      page_dom       = @crawler.get_dom # 获取页面对象
       seller_nick    = get_seller_nick(page_dom)
-      current_seller = where(_id: seller_nick.to_s).last
+      current_seller = where(_id: seller_nick.to_s).first
 
-      if current_seller.nil?
+      result = if current_seller.nil?
         seller     = { store_url: store_url, seller_nick: seller_nick }
         seller_ids = parse_seller_ids(page_dom)
+
         if seller_ids
-          seller.merge!(seller_ids) 
-          current_seller = create(seller) 
+          logger.info "通过#{store_url}，创建店铺 #{seller_nick}。"
+          seller.merge!(seller_ids)
+          { status: 'created', seller: create(seller) } # 创建店铺
+        else
+          logger.error "通过#{store_url}，创建店铺失败。"
+          nil # 识别不出HTML内容
         end
       else
-        puts "更新#{current_seller._id}店铺数据。"
+        { status: 'already', seller: current_seller } # 店铺已存在
       end
-      if current_seller
-        current_seller.store_sync(page_dom) 
-      else
-        puts "通过#{store_url} 创建店铺失败。"
-      end
+      return result
     end
 
     private

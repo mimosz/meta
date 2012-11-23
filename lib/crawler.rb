@@ -50,6 +50,8 @@ class Crawler
       url = location
       get_html({path: fixed_path, try_count: try_count})
     end
+  rescue Nestful::ServerError => error
+    return nil
   end
 
   def get_json(try_count=0)
@@ -71,7 +73,12 @@ class Crawler
 
   def get_dom
     html = get_html
-    return Nokogiri::HTML(html)
+    dom = if html.nil?
+      nil
+    else
+      Nokogiri::HTML(html)
+    end
+    return dom
   end
 
   def taobao_item_json(seller_id, num_iid)

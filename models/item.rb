@@ -2,6 +2,7 @@
 
 class Item
   include Mongoid::Document
+  include Mongoid::Timestamps::Created
   # Referenced
   has_and_belongs_to_many :categories, index: true do
     def cat_names
@@ -92,7 +93,7 @@ class Item
       # 设定售罄、下架宝贝
       items = seller.items.where( status: 'onsale', :synced_at.lt => @timestamp )
       if items.empty?
-        puts "暂无，售罄、下架宝贝。"
+        logger.warn "宝贝 无售罄、无下架。"
       else
         items.each do |current_item|
           item = { num_iid: current_item.num_iid, status: 'inventory', synced_at: @timestamp }
@@ -105,9 +106,9 @@ class Item
           current_item.timelines << timeline 
           current_item.save
         end
-        puts "同步：售罄、下架宝贝。"
+        logger.info "同步：售罄、下架宝贝。"
       end
-      puts "同步批次号：#{timestamp}。"
+      logger.warn "同步批次号：#{timestamp}。"
     end
 
     def sync(seller, timestamp, page_dom=nil)
@@ -119,7 +120,7 @@ class Item
       @campaign  = nil # 大促
 
       if page_dom
-        puts "没有店铺类目。"
+        logger.warn "店内无类目，仅同步宝贝数据。"
         items_dom = init_items(page_dom)
         if items_dom
           each_items(items_dom)
@@ -137,13 +138,13 @@ class Item
                 each_pages
               end
             else
-              puts "店铺分类：#{category.cat_name}"
+              logger.info "店铺分类：#{category.cat_name}"
             end
           end
-          puts "同步：店铺分类下宝贝。"
+          logger.info "同步：店内类目下宝贝。"
         end
       end
-      puts "同步批次号：#{timestamp}。"
+      logger.warn "同步批次号：#{timestamp}。"
     end
 
     private
@@ -152,7 +153,7 @@ class Item
       params = { 'pageNum' => page }
       if @category
         params.merge!({'scid' => @category.cat_id}) 
-        puts "店铺分类：#{@category.cat_name}。"
+        logger.info "店铺分类：#{@category.cat_name}。"
       end
       @crawler.params = params
       @crawler.item_search_url
@@ -184,16 +185,16 @@ class Item
     def init_items(page_dom)
       total = get_total(page_dom)
       if total < 1
-        puts "本页没有货品。"
+        logger.error "本页没有货品。"
       else
         items_dom = get_items_dom(page_dom)
         if items_dom
           items_count = items_dom.count
-          puts "共有货品 #{total}件，每页 #{items_count}件。"
+          logger.warn "共有货品 #{total}件，每页 #{items_count}件。"
           @pages      = pages_count(total, items_count) if total > items_count
           return items_dom
         else
-          puts "咦~，共有#{total}件货品呀？"
+          logger.error "咦~，共有#{total}件货品呀？"
         end
       end
       nil
@@ -206,10 +207,10 @@ class Item
           page_dom  = get_page_dom(page)
           items_dom = get_items_dom(page_dom) if page_dom
           each_items(items_dom) if items_dom
-          puts "第 #{page}/#{@pages} 页。"
+          logger.warn "第 #{page}/#{@pages} 页。"
         end
       else
-        puts "没有分页。"
+        logger.error "没有分页。"
       end
     end
 
@@ -238,7 +239,7 @@ class Item
               current_item.timelines << timeline 
               current_item.save
             else
-              puts "跳过，重复计算。"
+              logger.info "跳过，重复计算。"
             end
           else
             set_item_sales(item)
@@ -385,7 +386,7 @@ class Item
           sales[:post_fee] = true
         end
       else
-        puts "模板变更需要调整：#{@crawler.request.url}"
+        logger.fatal "模板变更需要调整：#{@crawler.request.url}"
       end
       return sales
     end

@@ -10,6 +10,23 @@ Meta.controllers :sellers do
     @sellers = Seller.all.includes(:campaigns).page(@page).per(@page_size)
     render 'sellers/index'
   end
+
+  post :create do
+    result = Seller.sync(params[:account][:store_url])
+    if result.nil?
+      flash[:error] = '非常抱歉，您提供的店铺地址，系统未能识别~'
+      redirect url(:sellers, :index)
+    else
+      case result[:status].to_sym
+      when :created
+        flash[:notice] = "欢迎光临，#{seller._id}，请开启数据抓取任务。"
+        redirect url(:resque, :index, seller_id: result[:seller]._id)
+      when :already
+        flash[:notice] = "欢迎光临，#{seller._id}。"
+        redirect url(:sellers, :show, seller_id: result[:seller]._id)  
+      end
+    end
+  end
   
   get :show, with: :seller_id, provides: [:html, :csv] do
     @seller = Seller.where(_id: params[:seller_id].force_encoding('utf-8')).last

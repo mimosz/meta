@@ -32,40 +32,40 @@ class Sale
     def sync(seller, timestamp)
       synced_at   = Time.at(timestamp)
       seller_nick = seller._id
-      #
+      # 默认值
       default     = nil
-      #
+      # 销售
       seller_sales   = nil
       campaign_sales = {}
       category_sales = {}
 
       items     = seller.items.where('timelines._id' => timestamp)
       unless items.empty?
-        # 
+        # 宝贝
         items.each do |item|
           timeline = item.timelines.where(_id: timestamp).first
           if timeline
             # 
             if default.nil?
               #
-              default    = { seller_nick: seller_nick, synced_at: synced_at, duration: timeline.duration }
+              default      = { seller_nick: seller_nick, synced_at: synced_at, duration: timeline.duration }
               #
-              seller_sales   = seller.sales.new(default)
+              seller_sales = seller.sales.new(default)
               #
               sales_new(campaign_sales, seller.campaigns.ing(synced_at), default)
               sales_new(category_sales, seller.categories, default)
             end
-            # 
+            # 累加，店铺销售
             sales_sum(seller_sales, timeline)
-            #
+            # 累加，店内类目销售
             sales_set(category_sales, item.category_ids, timeline) 
-            # 
+            # 累加，促销活动销售
             sales_set(campaign_sales, item.campaign_ids, timeline) 
           end
         end
         # 
         unless default.nil?
-          seller_sales.save if seller_sales
+          seller_sales.save
           # 
           sales_save(category_sales)
           # 

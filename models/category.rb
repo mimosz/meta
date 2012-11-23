@@ -49,12 +49,12 @@ class Category
       cats = if cats_dom # 淘宝系统，树形分类
         each_cats(cats_dom)              
       else # 自定义分类
-        puts "店铺，自定义分类"
+        logger.warn "店铺，自定义分类"
         get_cats(page_dom)
       end
 
       if cats.nil? || cats.empty?
-        puts "错大发了~~"
+        logger.error "什么店铺呀？！居然不错店内分类。"
         return false
       else
         each_create(seller, cats)
@@ -85,11 +85,11 @@ class Category
     def find_cat(link)
       href = link[:href]
       if href.nil?
-        puts '跳过，锚'
+        logger.info 'HTML解析，跳过，锚'
       else
         params = URI.parse(href.strip).query || nil
         if params.nil?
-          puts '跳过，无参数链接'
+          logger.info 'HTML解析，跳过，无参数链接'
         else
           params = CGI.parse(params)
           if params.has_key?('scid') # 分类链接

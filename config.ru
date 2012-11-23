@@ -13,4 +13,4 @@ run Rack::URLMap.new \
   '/resque' => Resque::Server.new
 
 memory_usage = (`ps -o rss= -p #{$$}`.to_i / 1024.00).round(2)
-puts "=> Memory usage: #{memory_usage} Mb"
+logger.warn "使用内存: #{memory_usage} M"

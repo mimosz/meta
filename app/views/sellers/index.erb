@@ -1,3 +1,9 @@
+<% form_for :seller, url(:sellers, :create), class: 'form-inline' do |f| %>
+  <div class='input-append'>
+    <%= f.text_field :store_url, placeholder: 'http://newbalance.tmall.com' %>
+    <%= f.submit '创建', class:'btn btn-primary' %>
+  </div>
+<% end %>
 
 <h3>店铺列表</h3>
 <table id="sellers" class="table table-bordered">
