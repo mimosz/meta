@@ -19,10 +19,10 @@ Meta.controllers :sellers do
     else
       case result[:status].to_sym
       when :created
-        flash[:notice] = "欢迎光临，#{seller._id}，请开启数据抓取任务。"
+        flash[:notice] = "欢迎光临，#{result[:seller]._id}，请开启数据抓取任务。"
         redirect url(:resque, :index, seller_id: result[:seller]._id)
       when :already
-        flash[:notice] = "欢迎光临，#{seller._id}。"
+        flash[:notice] = "欢迎光临，#{result[:seller]._id}。"
         redirect url(:sellers, :show, seller_id: result[:seller]._id)  
       end
     end
