@@ -29,7 +29,8 @@ class Seller
 
   field :seller_nick, type: String
   field :store_url,   type: String
-  field :_id,         type: String, default: -> { seller_nick }
+  field :synced_at,   type: DateTime, default: -> { Time.now } # 店铺同步时间
+  field :_id,         type: String,   default: -> { seller_nick }
 
   def category_parents
     categories.where(parent_id: nil)
@@ -40,7 +41,9 @@ class Seller
   end
 
   def store_sync(page_dom)
-    timestamp = Time.now.to_i
+    syncing_at = Time.now
+    timestamp  = syncing_at.to_i
+    
     if Category.sync(self, page_dom)
       puts "店铺分类数：#{categories.count}"
       Item.sync(self, timestamp)
@@ -48,10 +51,12 @@ class Seller
       puts "没有找到店铺分类。"
       Item.sync(self, timestamp, page_dom)
     end
-    # 
+    # 下架或售罄同步
     Item.recycling(self, timestamp)
-    #
-    Sale.sync(self, timestamp)
+    # 销售统计
+    Sale.sync(self, synced_at.to_i)
+    # 更新店铺同步时间
+    update_attributes(synced_at: syncing_at)
   end
 
   class << self
