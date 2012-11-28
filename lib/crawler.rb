@@ -8,6 +8,7 @@ class Crawler
     @url     = url
     @request = Nestful::Request.new(@url)
     @request.headers = { 'User-Agent' => switcher }
+    @request.timeout = 15 # 秒
   end
 
   def request

@@ -114,9 +114,12 @@ class Category
               end
             end
             return { cat_id: cat_id, cat_name: cat_name,  }
+          else
+            logger.info 'HTML解析，跳过，非分类链接'
           end
         end
       end
+      nil
     rescue URI::InvalidURIError
       nil
     end

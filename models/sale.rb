@@ -44,47 +44,51 @@ class Sale
         # 宝贝
         items.each do |item|
           timeline = item.timelines.where(_id: timestamp).first
-          if timeline
-            # 
+          if timeline 
             if default.nil?
               #
               default      = { seller_nick: seller_nick, synced_at: synced_at, duration: timeline.duration }
               #
-              seller_sales = seller.sales.new(default)
+              seller_sales = Sale.new(default)
               #
               sales_new(campaign_sales, seller.campaigns.ing(synced_at), default)
               sales_new(category_sales, seller.categories, default)
             end
             # 累加，店铺销售
-            sales_sum(seller_sales, timeline)
+            sales_sum(item._id, seller_sales, timeline)
             # 累加，店内类目销售
-            sales_set(category_sales, item.category_ids, timeline) 
+            sales_set(item._id, category_sales, item.category_ids, timeline) 
             # 累加，促销活动销售
-            sales_set(campaign_sales, item.campaign_ids, timeline) 
+            sales_set(item._id, campaign_sales, item.campaign_ids, timeline) 
           end
         end
         # 
         unless default.nil?
-          seller_sales.save
+          seller.sales << seller_sales
+          if seller.save
+            logger.warn "店铺#{seller._id}销售#{seller_sales.sales}。"
+          else
+            logger.error "创建店铺#{seller._id}，销售失败。"
+          end
           # 
-          sales_save(category_sales)
+          sales_save(Category, category_sales)
           # 
-          sales_save(campaign_sales)
+          sales_save(Campaign, campaign_sales)
         end
       end
     end
 
     private
 
-    def sales_sum(sales, sale)
+    def sales_sum(id, sales, sale)
       # 
       case sale.status
       when 'onsale'
-        sales.onsales     << sale._id
+        sales.onsales     << id
       when 'soldout'
-        sales.soldouts    << sale._id
+        sales.soldouts    << id
       when 'inventory'
-        sales.inventories << sale._id
+        sales.inventories << id
       end
       # 
       unless sale.prom_type.nil?
@@ -103,23 +107,29 @@ class Sale
     def sales_new(node, objs, vals)
       unless objs.empty?
         objs.each do |obj|
-          node[obj._id] = obj.sales.new(vals)
+          node[obj._id] = Sale.new(vals)
         end
       end
     end
 
-    def sales_set(node, objs, vals)
+    def sales_set(id, node, objs, vals)
       unless objs.empty?
         objs.each do |obj|
-          sales_sum(node[obj], vals) if node.has_key?(obj)
+          sales_sum(id, node[obj], vals) if node.has_key?(obj)
         end
       end
     end
 
-    def sales_save(node)
+    def sales_save(collection, node)
       unless node.empty?
         node.each do |id, sale|
-          sale.save
+          document = collection.find(id)
+          document.sales << sale
+          if document.save
+            logger.warn "#{document._id}销售#{sale.sales}。"
+          else
+            logger.error "创建#{document._id}销售失败。"
+          end
         end
       end
     end

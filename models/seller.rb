@@ -25,11 +25,42 @@ class Seller
   # Fields
   field :seller_id,   type: Integer
   field :shop_id,     type: Integer
+  field :uid,         type: String   # 用户字符串ID
 
   field :seller_nick, type: String
   field :store_url,   type: String
+  field :company,     type: String
+  field :label,       type: String
+  
   field :synced_at,   type: DateTime # 店铺同步时间
   field :_id,         type: String,  default: -> { seller_nick }
+
+  after_create :set_info
+
+  def synced_time
+    if synced_at
+      synced_at.in_time_zone.strftime("%m月%d日 %H时")
+    else
+      '期待数据中..'
+    end
+  end
+
+  def set_info
+    if uid
+      @crawler = Crawler.new(rate_url)
+      page_dom = @crawler.get_dom
+      return nil if page_dom.nil?
+      info_list = page_dom.at('div.personal-info').at('ul').css('li')
+      company   = info_list[0].at('div.fleft2').text.strip
+      label     = info_list[1].at('a').text.strip
+      # 更新
+      update_attributes(company: company, label: label)
+    end
+  end
+
+  def rate_url
+    'http://rate.taobao.com/user-rate-' + uid + '.htm'
+  end
 
   def category_parents
     categories.where(parent_id: nil)
@@ -75,7 +106,7 @@ class Seller
       current_seller = where(_id: seller_nick.to_s).first
 
       result = if current_seller.nil?
-        seller     = { store_url: store_url, seller_nick: seller_nick }
+        seller     = { store_url: store_url, seller_nick: seller_nick, uid: get_uid(page_dom) }
         seller_ids = parse_seller_ids(page_dom)
 
         if seller_ids
@@ -112,6 +143,10 @@ class Seller
       URI.decode(seller_nick) if seller_nick
     end
 
+    def get_uid(page_dom)
+      uid = page_dom.at('p.shop-grade')
+      uid.css('a').first['href'].match(/rate-(.*).htm/)[1] if uid
+    end
   end
 
 end

@@ -17,8 +17,9 @@
     <% end %>
     <tr>
       <th>店铺名称</th>
-      <th>大促</th>
+      <th>主营</th>
       <th>#</th>
+      <th>最后同步时间</th>
     </tr>
   <thead>
   <% unless @sellers.empty? %>
@@ -26,25 +27,18 @@
     <% @sellers.each do |seller| %>
         <tr>
           <td><%= link_to seller.seller_nick, seller.store_url %></td>
-          <td>
-            <% if seller.campaigns.pre.exists? %>
-              <ul class='nav nav-list'>
-              <% seller.campaigns.pre.each do |campaign| %>
-                <li><%= link_to campaign.name, url(:sellers, :show, seller_id: seller._id, campaign_id: campaign._id) %></li>
-              <% end %>
-              </ul>
-            <% end %>
-          </td>
+          <td><%= seller.label %></td>
           <td>
             <%= link_to '全部货品', url(:sellers, :show, seller_id: seller._id) %>
             <%= link_to "<i class='icon-time'></i>", url(:resque, :index, seller_id: seller._id) %>
           </td>
+          <td><%= seller.synced_time %></td>
         </tr>
       <% end %>
     </tbody>
   <% else %>
     <tr>
-      <td colspan="3">没货品～～</td>
+      <td colspan="4">没货品～～</td>
     </tr>
   <% end %>
 </table>
