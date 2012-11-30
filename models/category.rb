@@ -4,8 +4,7 @@ require 'digest/md5'
 class Category
   include Mongoid::Document
   include Mongoid::Timestamps # adds created_at and updated_at fields
-  embeds_many :sales,     as: :saleable, class_name: 'Sale'
-  embeds_one  :last_sale, as: :saleable, class_name: 'Sale'
+  embeds_many :sales, as: :saleable
   # Referenced
   has_and_belongs_to_many :items, index: true
   has_many   :children, foreign_key: 'parent_id', class_name: 'Category'
@@ -64,24 +63,6 @@ class Category
 
     private
 
-    def ocr_chn(url) # 解析图片上文字
-      img     = MiniMagick::Image.open(url)
-      img.resize '160%'
-      img.colorspace("GRAY") # 灰度化 
-      str     = RTesseract.new(img.path, lang: 'chi_sim').to_s.strip # 识别
-      chinese = str.match(/(\p{Han}+)/)
-      str = if chinese
-        chinese[1] 
-      else
-        url
-      end
-      File.unlink(img.path)  # 删除临时文件
-      return str
-    rescue RTesseract::ConversionError
-      File.unlink(img.path)  # 删除临时文件
-      url
-    end
-
     def find_cat(link)
       href = link[:href]
       if href.nil?
@@ -101,13 +82,8 @@ class Category
               if cat_name.blank? # 无文字，找图片文字
                 img = link.at('img')
                 if img
-                  text = img['alt']
-                  cat_name = if text.blank?
-                    url  = img['data-ks-lazyload'] || img['src']
-                    text = ocr_chn(url) # 解析图片上的文字
-                  else
-                    text
-                  end
+                  cat_name = img['alt']
+                  cat_name = img['data-ks-lazyload'] || img['src'] if cat_name.blank?
                 else
                   cat_name = '未知分类'  
                 end

@@ -2,7 +2,7 @@
 
 class Sale
   include Mongoid::Document
-  belongs_to :saleable, polymorphic: true
+  embedded_in :saleable, polymorphic: true
 
 
   # Fields

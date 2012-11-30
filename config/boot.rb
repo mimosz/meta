@@ -3,11 +3,16 @@
 # Defines our constants
 PADRINO_ENV  = ENV['PADRINO_ENV'] ||= ENV['RACK_ENV'] ||= 'development'  unless defined?(PADRINO_ENV)
 PADRINO_ROOT = File.expand_path('../..', __FILE__) unless defined?(PADRINO_ROOT)
-REDIS_URL    = 'redis://127.0.0.1:6379' unless defined?(REDIS_URL)
+ENV['RAILS_ENV'] ||= PADRINO_ENV
+
 # Load our dependencies
 require 'rubygems' unless defined?(Gem)
 require 'bundler/setup'
+require 'active_support/time_with_zone'
+require 'sidekiq/scheduler'
+
 Bundler.require(:default, PADRINO_ENV)
+
 # 兼容 Rails
 module Rails
     def self.root
@@ -17,10 +22,7 @@ module Rails
       Padrino.logger
     end
 end
-##
-# ## Enable devel logging
-#
-Rails.logger.colorize!
+
 # ## Configure your I18n
 #
 I18n.default_locale = :zh_cn
@@ -43,6 +45,8 @@ I18n.default_locale = :zh_cn
 #
 Padrino.before_load do
   Mongoid.load!(Padrino.root('config/mongoid.yml'), Padrino.env)
+  Mongoid.logger = Padrino.logger # 设定日志
+  Moped.logger   = Padrino.logger
 end
 
 ##
@@ -50,10 +54,22 @@ end
 #
 Padrino.after_load do
   # 编码处理
-  unless RUBY_VERSION < '1.9'
-    Encoding.default_internal = nil
-  end
+  Encoding.default_internal = nil
   Time.zone = 'Beijing'
+
+  Padrino.logger.colorize!
+
+  Sidekiq.logger = Padrino.logger
+  
+  Sidekiq.configure_client do |config|
+    config.redis = { url: 'redis://192.168.0.135:6379', namespace: 'meta' }
+  end
+
+  Sidekiq.configure_server do |config|
+    config.redis = { url: 'redis://192.168.0.135:6379', namespace: 'meta' }
+  end
+
+  Sidekiq::Scheduler.dynamic = true
 end
 
 Padrino.load!

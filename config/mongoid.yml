@@ -5,7 +5,7 @@ production:
       username: howl
       password: '800622'
       hosts: 
-        - 127.0.0.1:27017
+        - 192.168.0.135:27017
   options:
       identity_map_enabled: true
       skip_version_check: true
@@ -16,7 +16,7 @@ development:
       username: howl
       password: '800622'
       hosts: 
-        - 127.0.0.1:27017
+        - 192.168.0.135:27017
   options:
       identity_map_enabled: true
       skip_version_check: true

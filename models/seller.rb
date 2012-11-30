@@ -3,8 +3,7 @@
 class Seller
   include Mongoid::Document
   include Mongoid::Timestamps # adds created_at and updated_at fields
-  embeds_many :sales,     as: :saleable, class_name: 'Sale'
-  embeds_one  :last_sale, as: :saleable, class_name: 'Sale'
+  embeds_many :sales, as: :saleable
   # Referenced
   # 分类
   has_many :categories, foreign_key: 'seller_nick', dependent: :delete    

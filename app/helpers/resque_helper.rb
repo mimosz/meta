@@ -8,10 +8,10 @@ Meta.helpers do
 
   def interval(queue)
     case
-    when queue.has_key?(:every)
-      '每' + queue[:every].gsub('w','周').gsub('d','天').gsub('h','小时').gsub('m','分钟').gsub('s','秒')
-    when queue.has_key?(:cron)
-      cron_str(queue[:cron])
+    when queue.has_key?('every')
+      '每' + queue['every'].gsub('w','周').gsub('d','天').gsub('h','小时').gsub('m','分钟').gsub('s','秒')
+    when queue.has_key?('cron')
+      cron_str(queue['cron'])
     end
   end
 
@@ -41,7 +41,7 @@ Meta.helpers do
 
   def resque
     return @resque if defined?(@resque)
-    @resque = Resque
+    @resque = Sidekiq
   end
 
   def cron_str(cron)
@@ -54,24 +54,24 @@ Meta.helpers do
             str += '周' + cron_week(section) + '，' if section != '*'
           when 1 # 月份
             if section != '*'
-              str += '年' if str.size == 1
-              str += section + '月' 
+              str += '年' if str.size == 1 && section.index('*/').nil?
+              str += section.gsub( '*/', '') + '月' 
             end
           when 2 # 日期
              if section != '*'
-              str += '月' if str.size == 1
-              str += section + '号'
+              str += '月' if str.size == 1 && section.index('*/').nil?
+              str += section.gsub( '*/', '') + '号'
             end
           when 3 # 小時
             if section != '*'
-              str += '天' if str.size == 1 
-              str += section + '点'
+              str += '天' if str.size == 1 && section.index('*/').nil?
+              str += section.gsub( '*/', '') + '点'
             end
           when 4 # 分钟
              if section != '*'
-              str += '小时' if str.size == 1 
-              str += section + '分'
-            end
+              str += '小时' if str.size == 1 && section.index('*/').nil?
+              str += section.gsub( '*/', '') + '分'
+             end
         end
       end
     end

@@ -1,7 +1,7 @@
 <tr id="<%= @resque_id %>">
-  <td><%= @queue[:description] %></td>
+  <td><%= @queue['description'] %></td>
   <td><%= interval(@queue) %></td>
   <td>
-    <%= link_to "<i class='icon-play'></i>", url(:resque, :play, seller_id: @seller._id, resque_id: @resque_id, format: :js), remote: true, rel: "tooltip", 'data-original-title' => "开启" %>
+    <%= link_to "<i class='icon-play'></i>", url(:resque, :play, seller_id: @seller._id, resque_id: @resque_id, format: :js), remote: true, rel: 'tooltip', 'data-original-title' => '开启' %>
   </td>
 </tr>
