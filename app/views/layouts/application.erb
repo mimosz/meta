@@ -15,7 +15,7 @@
     <div id="navbar" class="navbar navbar-inverse navbar-fixed-top">
       <div class="navbar-inner">
         <div class="container">
-          <%= link_to '首页', url(:sellers, :index), class: 'brand' %>
+          <%= link_to '店', url(:sellers, :index), class: 'brand' %>
         </div>
       </div>
     </div>
@@ -24,7 +24,25 @@
           <div class='btn-toolbar'>
             <div class='lead'><%= yield_content :lead %></div>
           </div>
-        <%= yield_content :header %>
+          <%= yield_content :header %>
+          <% if defined?(@seller) %>
+            <div class='subnav clearfix'>
+              <ul class='nav nav-pills'>
+                <% sub_menu = render_list class: 'dropdown-menu' do |li|
+                  li << link_to('数据同步', url(:resque, :index, seller_id: @seller._id ))
+                 end
+                %>
+                <%= render_list class: 'nav nav-pills' do |li|
+                  li << link_to(@seller._id, url(:sellers, :show, seller_id: @seller._id ))
+                  li << link_to('分 类', url(:categories, :index, seller_id: @seller._id ))
+                  li << link_to('促 销', url(:campaigns, :index, seller_id: @seller._id ))
+                  li << link_to('货 品', url(:items, :index, seller_id: @seller._id))
+                  li << [(link_to('<i class=icon-cog></i>', '#', rel: 'tooltip', title: '系统设置', class: 'dropdown-toggle', 'data-toggle' => 'dropdown') + sub_menu ), class: 'dropdown pull-right']
+                 end
+                %>
+              </ul> 
+            </div>   
+          <% end %>
         </div> 
       </div>
       <div class="container">

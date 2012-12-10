@@ -1,6 +1,5 @@
-<% content_for :lead do %>任务管理器<% end %>
+<% content_for :lead do %>计划任务<% end %>
 <div class='span12 columns'>
-  
   <table class='table table-bordered'>
     <thead>
       <tr>
@@ -13,7 +12,7 @@
       <% @queues.each do |queue_id, queue| %>
         <% status = queue_status(queue_id) %>
         <tr id='<%= queue_id %>' class='<%= status.to_s %>'>
-          <td><%= queue['description'] %></td>
+          <td><%= queue[:description] %></td>
           <td><%= interval(queue) %></td>
           <td>
             <% if status %>

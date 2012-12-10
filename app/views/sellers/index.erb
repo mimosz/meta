@@ -32,7 +32,7 @@
             <%= link_to '全部货品', url(:sellers, :show, seller_id: seller._id) %>
             <%= link_to "<i class='icon-time'></i>", url(:resque, :index, seller_id: seller._id) %>
           </td>
-          <td><%= seller.synced_time %></td>
+          <td><%= local_time(seller.synced_at) %></td>
         </tr>
       <% end %>
     </tbody>

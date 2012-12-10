@@ -4,9 +4,9 @@ require 'digest/md5'
 class Category
   include Mongoid::Document
   include Mongoid::Timestamps # adds created_at and updated_at fields
-  embeds_many :sales, as: :saleable
+  embeds_one  :timeline,  as: :timeable
+  embeds_many :timelines, as: :timeable
   # Referenced
-  has_and_belongs_to_many :items, index: true
   has_many   :children, foreign_key: 'parent_id', class_name: 'Category'
   belongs_to :seller,   foreign_key: 'seller_nick', index: true
   belongs_to :parent,   foreign_key: 'parent_id', class_name: 'Category', index: true
@@ -15,14 +15,20 @@ class Category
   field :cat_id,      type: Integer
   field :parent_id,   type: Integer
   field :priority,    type: Integer
+  field :timestamp,   type: Integer # 同步时间
+
   field :cat_name,    type: String
   field :seller_nick, type: String
 
-  field :synced_at,   type: Date # 类目下，商品同步时间
+  field :item_ids,    type: Array,  default: []
 
   field :_id,         type: Integer, default: -> { cat_id }
 
   default_scope asc(:priority)
+
+  def to_s
+    cat_name
+  end
 
   def check?(cat)
     new_str = cat.values.join('')
@@ -30,7 +36,60 @@ class Category
     return token == Digest::MD5.hexdigest(new_str)
   end
 
+  def items
+    Item.where(seller_nick: seller_nick).in(_id: item_ids)
+  end
+
   class << self
+    def sync(threading, seller_nick, page_dom)
+      # 起始化
+      unless defined?(@threading)
+        @threading = threading
+      end
+      if @threading.has_key?(seller_nick)
+        @threading[seller_nick][:crawler].item_search_url
+        # 解析分类
+        cats_dom = get_cats_dom(page_dom)
+        if cats_dom # 淘宝系统，树形分类
+          each_cats(seller_nick, cats_dom)              
+        else # 自定义分类
+          logger.warn "店铺，自定义分类"
+          get_cats(seller_nick, page_dom)
+        end
+        # 收集宝贝
+        if @threading[seller_nick][:categories].empty?
+          logger.warn "店铺，没有分类。"
+        else
+          category_ids = @threading[seller_nick][:categories].keys
+          category_ids.each do |category_id|
+            each_pages(seller_nick, category_id)
+          end
+        end
+        return @threading[seller_nick]
+      else
+        nil
+      end
+    end
+
+    def each_categories(categories, items)
+      logger.info "批量处理，店内分类。"
+      categories.each do |id, category|
+        if category[:item_ids].empty?
+          logger.warn "#{category[:cat_id]} #{category[:cat_name]}，分类中没有宝贝。"
+        else
+          category[:item_ids] = category[:item_ids].uniq.compact # 去重、去空
+          timeline = Timeline.new(each_timelines(items, category[:item_ids]))
+          current_category = Category.where(seller_nick: category[:seller_nick], _id: category[:cat_id]).first
+          if current_category && current_category.item_ids != category[:item_ids]
+            current_category[:timelines] = current_category.timelines << timeline
+            current_category.update_attributes( timestamp: category[:timestamp], item_ids: (current_category.item_ids && category[:item_ids]) )
+          else
+            create( category.merge!(timelines: [timeline]) )
+          end
+        end
+      end
+    end
+
     def each_create(seller, cats)
       cats.each do |cat|
         current_cat = where(_id: cat[:cat_id].to_i).last
@@ -41,114 +100,107 @@ class Category
         end
       end
     end
-    
-    def sync(seller, page_dom)
-      cats_dom = get_cats_dom(page_dom)
-
-      cats = if cats_dom # 淘宝系统，树形分类
-        each_cats(cats_dom)              
-      else # 自定义分类
-        logger.warn "店铺，自定义分类"
-        get_cats(page_dom)
-      end
-
-      if cats.nil? || cats.empty?
-        logger.error "什么店铺呀？！居然不错店内分类。"
-        return false
-      else
-        each_create(seller, cats)
-        return true
-      end
-    end
 
     private
 
-    def find_cat(link)
-      href = link[:href]
-      if href.nil?
-        logger.info 'HTML解析，跳过，锚'
+    def init(seller, items={}) # 设置，实例变量
+      @threading  = {} unless defined?(@threading)
+      # 店铺，初始值
+      unless @threading.has_key?(seller._id)
+        @threading[seller._id] = { crawler: Crawler.new(seller.store_url), pages: 1, categories:  {}, items: items  }
+        @threading[seller._id][:crawler].item_search_url
+      end
+    end
+
+    def get_page_dom(seller_id, category_id, page=1)
+      crawler = @threading[seller_id][:crawler]
+      crawler.params = { 'scid' => category_id, 'pageNum' => page }
+      logger.info "店铺分类：#{@threading[seller_id][:categories][category_id][:cat_name]}。"
+      return crawler.get_dom
+    end
+
+    def each_pages(seller_id, category_id)
+      # 分页执行
+      if @threading[seller_id][:pages] > 1
+        pages = @threading[seller_id][:pages]
+        2.upto(pages).each do |page|
+          page_dom  = get_page_dom(seller_id, category_id, page)
+          items_dom = get_items_dom(page_dom) if page_dom
+          each_items(seller_id, items_dom, category_id) if items_dom
+          logger.warn "第 #{page}/#{pages} 页。"
+        end
+        @threading[seller_id][:pages] = 1 # 用后清零
       else
-        params = URI.parse(href.strip).query || nil
-        if params.nil?
-          logger.info 'HTML解析，跳过，无参数链接'
-        else
-          params = CGI.parse(params)
-          if params.has_key?('scid') # 分类链接
-            cat_id = params['scid'].first
-            if params.has_key?('scname')
-              cat_name = Base64.decode64(URI.unescape(params['scname'].first )).force_encoding("GB18030").encode("UTF-8") # 淘宝分类链接，名称编码解析
-            else # 链接参数中，不带名称
-              cat_name = link.text
-              if cat_name.blank? # 无文字，找图片文字
-                img = link.at('img')
-                if img
-                  cat_name = img['alt']
-                  cat_name = img['data-ks-lazyload'] || img['src'] if cat_name.blank?
-                else
-                  cat_name = '未知分类'  
-                end
-              end
-            end
-            return { cat_id: cat_id, cat_name: cat_name,  }
+        page_dom = get_page_dom(seller_id, category_id)
+        if page_dom
+          total    = get_total(page_dom)
+          if total < 1
+            logger.error "本页没有货品。"
           else
-            logger.info 'HTML解析，跳过，非分类链接'
+            items_dom = get_items_dom(page_dom)
+            if items_dom
+              each_items(seller_id, items_dom, category_id)
+              items_count = items_dom.count
+              if total > items_count
+                @threading[seller_id][:pages] = @threading[seller_id][:crawler].pages_count(total, items_count)
+                pages = @threading[seller_id][:pages]
+                logger.warn "货品共有 #{total}件，每页 #{items_count}件，分为 #{pages}页。"
+                each_pages(seller_id, category_id) if pages > 1 # 内循环，执行分页
+              end
+            else
+              logger.error "咦~，共有#{total}件货品呀？"
+            end
           end
         end
       end
-      nil
-    rescue URI::InvalidURIError
-      nil
     end
 
-    def get_cats(page_dom) # 自定义分类
+    def each_items(seller_id, items_dom, category_id)
+      items_dom.each do |item_dom|
+        item_link = item_dom.at('div.pic').at('a')
+        num_iid   = parse_num_iid(item_link) if item_link
+        if num_iid && @threading[seller_id][:items].has_key?(num_iid)
+          # 收集，分类中的宝贝
+          @threading[seller_id][:categories][category_id][:item_ids] << num_iid
+          @threading[seller_id][:items][num_iid][:category_ids] << category_id
+        else
+          logger.error "出现错误，宝贝ID：#{num_iid}，分类ID：#{category_id}"
+        end
+      end
+    end
+
+    def get_cats(seller_id, page_dom) # 自定义分类
       links = page_dom.css('a')
-      cats = []
+      cats  = @threading[seller_id][:categories]
       links.each do |link|
         cat = find_cat(link)
-        cats << cat if cat
+        if cat
+          cats[cat[:cat_id]] = cat unless cats.has_key?(cat[:cat_id])
+        end
       end
-      return cats
     end
 
-    def get_cats_dom(page_dom) # 淘宝系统，树形分类
-      page_dom.at('ul#J_Cats').css('li.cat') if page_dom.at('ul#J_Cats')
-    end
-
-
-
-    def parse_cat(cat_dom, priority, parent_id)
-      { cat_id: parse_id(cat_dom[:id]), priority: priority, cat_name: parse_name(cat_dom.at('a')), parent_id: parent_id }
-    end
-
-    def parse_name(link_dom)
-      name = link_dom.text
-      name = link_dom.at('img')[:alt] if name.blank?
-      name.strip
-    end
-
-    def parse_id(html)
-      html.gsub('J_Cat','')
-    end
-
-    def each_cats(cats_dom, priority=0, parent_id=nil)
-      cats = []
+    def each_cats(seller_id, cats_dom, priority=0, parent_id=nil)
+      cats = @threading[seller_id][:categories]
       cats_dom.each do |cat_dom|
         case cat_dom[:class]
         when 'cat J_CatHeader' # 淘宝系统分类
           next # 跳过
         end
-
         cat = parse_cat(cat_dom, priority, parent_id)
-        cats << cat
-        priority += 1
+        if cat
+          cats[cat[:cat_id]] = cat unless cats.has_key?(cat[:cat_id])
+          priority += 1
+        end
         children_dom = cat_dom.css('li')
         if children_dom # 是否含子类
-          children  = each_cats(children_dom, priority, cat[:cat_id])
-              cats += children
-          priority += children.count
+          priority = each_cats(seller_id, children_dom, priority, cat[:cat_id])
         end
       end
-      return cats
-    end 
+      return priority
+    end
+    include BaseParse
+    include CategoryParse 
+    include TimelineParse
   end
 end

@@ -1,0 +1,121 @@
+<% unless @categories.empty? %>
+<table class='table table-bordered table-striped table-hover'>
+  <thead>
+    <tr>
+      <th colspan='2'>
+        <% if @seller.last_sales.nil? %>
+          等待数据中...
+        <% else %>
+          <%= local_time(@seller.last_sales.synced_at) %> ~ <%= local_time(@seller.last_sales.last_synced_at) %>
+        <% end %>
+      </th>
+      <% items_count = @seller.items.count %>
+      <th colspan='2'><%= items_count %></th>
+      <% if @seller.last_sales.nil? %>
+        <th colspan='13'>等待数据中...</th>
+      <% else %>
+        <th><%= @seller.last_sales.onsales.count %></th>
+        <th><%= @seller.last_sales.soldouts.count %></th>
+        <th><%= @seller.last_sales.inventories.count %></th>
+        <th>
+          <% if @seller.last_sales.proms.empty? %>
+            无
+          <% else %>
+            <% @seller.last_sales.proms.each do |prom| %>
+              <span class='label badge-inverse'><%= prom %></span>
+            <% end %>
+          <% end %>
+        </th>
+        <th colspan='2'><%= @seller.last_sales.sales %></th>
+        <th colspan='2'><%= @seller.last_sales.volume %></th>
+        <th colspan='2'><%= @seller.last_sales.quantity %></th>
+        <th colspan='2'><%= @seller.last_sales.favs_count %></th>
+      <% end %>
+    </tr>
+    <tr>
+      <th>一级</th>
+      <th>二级</th>
+      <th>宝贝数</th>
+      <th>占比</th>
+      <th>在售</th>
+      <th>售罄</th>
+      <th>下架</th>
+      <th>促销</th>
+      <th>销售额</th>
+      <th>占比</th>
+      <th>销售量</th>
+      <th>占比</th>
+      <th>库存</th>
+      <th>占比</th>
+      <th>收藏量</th>
+      <th>占比</th>
+    </tr>
+  </thead>
+  <% @categories.each do |category| %>
+    <tr id='<%= category._id %>'>
+     <td><%= nest_name(category.to_s) %></td>
+     <td>&nbsp;</td>
+     <td><%= category.items_count %></td>
+     <td><%= percent(category.items_count, items_count) %></td>
+     <% if category.last_sales.nil? %>
+        <td colspan='13'>等待数据中...</td>
+     <% else %>
+        <td><%= category.last_sales.onsales.count %></td>
+        <td><%= category.last_sales.soldouts.count %></td>
+        <td><%= category.last_sales.inventories.count %></td>
+        <td>
+          <% if category.last_sales.proms.empty? %>
+            无
+          <% else %>
+            <% category.last_sales.proms.each do |prom| %>
+              <span class='label badge-inverse'><%= prom %></span>
+            <% end %>
+          <% end %>
+        </td>
+       <td><%= category.last_sales.sales %></td>
+       <td><%= percent(category.last_sales.sales, @seller.last_sales.sales) %></td>
+       <td><%= category.last_sales.volume %></td>
+       <td><%= percent(category.last_sales.volume, @seller.last_sales.volume) %></td>
+       <td><%= category.last_sales.quantity %></td>
+       <td><%= percent(category.last_sales.quantity, @seller.last_sales.quantity) %></td>
+       <td><%= category.last_sales.favs_count %></td>
+       <td><%= percent(category.last_sales.favs_count, @seller.last_sales.favs_count) %></td>
+     <% end %>
+    </tr>
+    <% unless category.children.empty? %>
+      <% category.children.each do |child| %>
+        <tr id='<%= child._id %>'> 
+        <td>&nbsp;</td>
+        <td><%= nest_name(child.to_s) %></td> 
+        <td><%= child.items_count %></td>
+        <td><%= percent(child.items_count, items_count) %></td>
+        <% if child.last_sales.nil? %>
+          <td colspan='13'>等待数据中...</td>
+        <% else %>
+          <td><%= child.last_sales.onsales.count %></td>
+          <td><%= child.last_sales.soldouts.count %></td>
+          <td><%= child.last_sales.inventories.count %></td>
+          <td>
+            <% if child.last_sales.proms.empty? %>
+              无
+            <% else %>
+              <% child.last_sales.proms.each do |prom| %>
+                <span class='label badge-inverse'><%= prom %></span>
+              <% end %>
+            <% end %>
+          </td>
+          <td><%= child.last_sales.sales %></td>
+          <td><%= percent(child.last_sales.sales, @seller.last_sales.sales) %></td>
+          <td><%= child.last_sales.volume %></td>
+          <td><%= percent(child.last_sales.volume, @seller.last_sales.volume) %></td>
+          <td><%= child.last_sales.quantity %></td>
+          <td><%= percent(child.last_sales.quantity, @seller.last_sales.quantity) %></td>
+          <td><%= child.last_sales.favs_count %></td>
+          <td><%= percent(child.last_sales.favs_count, @seller.last_sales.favs_count) %></td>
+        <% end %>
+        </tr>
+      <% end %>
+    <% end %>
+  <% end %>
+</table>
+<% end %>

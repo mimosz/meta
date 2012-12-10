@@ -35,6 +35,7 @@ gem 'kaminari', git: 'git://github.com/mimosa/kaminari.git', require: 'kaminari/
 gem 'slim'
 gem 'sidekiq'
 gem 'sidekiq-scheduler'
+gem 'redis-objects', require: 'redis/objects'
 
 gem 'grape' # API接口
 gem 'padrino', git: 'git://github.com/padrino/padrino-framework.git'

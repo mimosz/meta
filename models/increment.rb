@@ -1,22 +1,24 @@
 # -*- encoding: utf-8 -*-
 
-class Increment
-  include Mongoid::Document
+class ItemIncrement < Metadata
+  embedded_in :timeline, class_name: 'ItemTimeline' # 增量
+
+  # Fields
+  field :total_sales, type: Float, default: 0
+  field :month_sales, type: Float, default: 0
+  field :qty_sales,   type: Float, default: 0
+  field :duration,    type: Float, default: 0 # 数据间隔，小时数
+  
+end
+
+class Increment < Metadata
   embedded_in :timeline
 
   # Fields
-  field :price,         type: Float
-  field :prom_price,    type: Float
-  field :prom_discount, type: Integer
-
-  field :total_num,     type: Integer
-  field :month_num,     type: Integer
-  field :quantity,      type: Integer
-
-  field :favs_count,    type: Integer
-  field :skus_count,    type: Integer
-
-  field :timestamp,     type: Integer
-  field :_id,           type: Integer, default: -> { timestamp }
+  field :total_sales, type: Float, default: 0
+  field :month_sales, type: Float, default: 0
+  field :qty_sales,   type: Float, default: 0
+  field :items_count, type: Integer, default: 0
+  field :duration,    type: Float, default: 0 # 数据间隔，小时数
   
 end

@@ -8,10 +8,10 @@ Meta.helpers do
 
   def interval(queue)
     case
-    when queue.has_key?('every')
-      '每' + queue['every'].gsub('w','周').gsub('d','天').gsub('h','小时').gsub('m','分钟').gsub('s','秒')
-    when queue.has_key?('cron')
-      cron_str(queue['cron'])
+    when queue.has_key?(:every)
+      '每' + queue[:every].gsub('w','周').gsub('d','天').gsub('h','小时').gsub('m','分钟').gsub('s','秒')
+    when queue.has_key?(:cron)
+      cron_str(queue[:cron])
     end
   end
 

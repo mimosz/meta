@@ -177,6 +177,12 @@ class Crawler
     request.url = @url + '/search.htm'
   end
 
+  def pages_count(total, size=20)
+    page = (total / size.to_f).to_i
+    page += 1 if (total % size) > 0
+    return page
+  end
+
   private
 
   def fixed_path

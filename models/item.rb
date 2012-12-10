@@ -1,18 +1,13 @@
 # -*- encoding: utf-8 -*-
+require 'redis/hash_key'
 
 class Item
   include Mongoid::Document
   include Mongoid::Timestamps::Created
-  # Referenced
-  has_and_belongs_to_many :categories, index: true do
-    def cat_names
-      only(:cat_name).distinct(:cat_name)
-    end
-  end
-  has_and_belongs_to_many :campaigns, index: true # 大促
 
-  embeds_many :timelines
-  belongs_to  :seller,  foreign_key: 'seller_nick', index: true
+  # Referenced
+  embeds_many :timelines, class_name:  'ItemTimeline'
+  belongs_to  :seller,    foreign_key: 'seller_nick', index: true
 
   # Fields
   field :num_iid,     type: Integer
@@ -22,7 +17,8 @@ class Item
   field :title,       type: String
   field :pic_url,     type: String
 
-  field :prom_type,     type: String
+  field :prom_type,   type: String
+  field :status,      type: String,   default: -> {'onsale'}  # 商品状态 [ onsale soldout inventory ]
 
   field :price,         type: Float,   default: 0
   field :tag_price,     type: Float,   default: -> { price }
@@ -36,36 +32,102 @@ class Item
   field :favs_count,  type: Integer,  default: 0
   field :skus_count,  type: Integer,  default: 0
   field :post_fee,    type: Boolean,  default: false
-  field :status,      type: String,   default: -> {'onsale'}  # 商品状态 [ onsale soldout inventory ]
 
-  field :synced_at,   type: DateTime, default: -> { Time.now }
+  field :campaign_ids,type: Array,  default: []
+  field :category_ids,type: Array,  default: []
 
+  field :timestamp,   type: Integer
   field :_id,         type: Integer,  default: -> { num_iid }
 
   scope :onsale, where(status: 'onsale')
 
   default_scope desc(:favs_count)
 
-  def to_timeline(timestamp = Time.now.to_i)
-    {
-      outer_id:      outer_id,
-      title:         title,
-      pic_url:       pic_url,
-      prom_type:     prom_type,
-      price:         price,
-      prom_price:    prom_price,
-      prom_discount: prom_discount,
-      total_num:     total_num,
-      month_num:     month_num,
-      quantity:      quantity,
-      favs_count:    favs_count,
-      skus_count:    skus_count,
-      post_fee:      post_fee,
-      status:        status,
-      synced_at:     synced_at,
+  def categories
+    Category.where(seller_nick: seller_nick).in(_id: category_ids)
+  end
+
+  def category_names
+    categories.only(:cat_name).distinct(:cat_name)
+  end
+
+  def campaigns # 大促
+    Campaign.where(seller_nick: seller_nick).in(_id: campaign_ids)
+  end
+
+  def campaign_names
+    campaigns.only(:name).distinct(:name)
+  end
+
+  def item_timeline(new_item)
+    timeline  = to_timeline
+    increment = item_increment(new_item)
+    if increment.nil? # 无差异，讲不形成记录
+      nil
+    else
+      timeline.merge(increment: increment)
+    end
+  end
+
+  def to_timeline
+    # {
+    #   outer_id:      outer_id,
+    #   title:         title,
+    #   pic_url:       pic_url,
+    #   prom_type:     prom_type,
+    #   price:         price,
+    #   prom_price:    prom_price,
+    #   prom_discount: prom_discount,
+    #   total_num:     total_num,
+    #   month_num:     month_num,
+    #   quantity:      quantity,
+    #   favs_count:    favs_count,
+    #   skus_count:    skus_count,
+    #   post_fee:      post_fee,
+    #   status:        status,
+    #   timestamp:     timestamp
+    # }
+    ActiveSupport::JSON.decode(self.to_json).symbolize_keys
+  end
+
+  def item_increment(new_item)
+    logger.debug new_item
+    new_increment = {
+       timestamp: new_item[:timestamp],
       # 小时
-      duration: (timestamp - synced_at.to_i) / 3600
+        duration: ( (new_item[:timestamp] - timestamp) / 3600.to_f).round(2),
+      # 销售
+       total_num: new_item[:total_num]  - total_num,
+       month_num: new_item[:month_num]  - month_num,
+      # 库存
+        quantity: new_item[:quantity]   - quantity,
+      skus_count: new_item[:skus_count] - skus_count,
+      # 收藏
+      favs_count: new_item[:favs_count] - favs_count,
+     total_sales: 0,
+     month_sales: 0,
+       qty_sales: 0,
     }
+    # 判断下架、售罄时，仅通过json解析，是没有价格数据的。
+    if new_item.has_key?(:price) 
+      new_increment[:price] = (new_item[:price] - price).round(2) 
+    end
+    # 优惠活动
+    if new_item[:prom_type] && new_item[:prom_price] > 0 
+           new_increment[:prom_price] = (new_item[:prom_price] - prom_price).round(2)
+        new_increment[:prom_discount] = new_item[:prom_discount] - prom_discount
+    end
+    # 无差异，讲不形成记录
+    if (new_increment[:total_num] + new_increment[:month_num] + new_increment[:quantity]) == 0 
+      nil
+    else
+      # 计算销售额
+      new_increment[:total_sales] = new_increment[:total_num]    * prom_price if new_increment[:total_num] > 0
+      new_increment[:month_sales] = new_increment[:month_num]    * prom_price if new_increment[:month_num] > 0
+      new_increment[:qty_sales]   = new_increment[:quantity].abs * prom_price if new_increment[:quantity]  < 0
+
+      new_increment
+    end
   end
 
   def show_status
@@ -85,316 +147,167 @@ class Item
 
   class << self
 
-    def recycling(seller, timestamp)
-      @timestamp = Time.at(timestamp)
-      @seller    = seller
-      @crawler   = Crawler.new(seller.store_url)
-
-      # 设定售罄、下架宝贝
-      items = seller.items.where( status: 'onsale', :synced_at.lt => @timestamp )
-      if items.empty?
-        logger.warn "宝贝 无售罄、无下架。"
-      else
-        items.each do |current_item|
-          item = { num_iid: current_item.num_iid, status: 'inventory', synced_at: @timestamp }
-          # 获取销售信息
-          set_item_sales(item)
-          # 设定历史版本
-          timeline = Timeline.new(current_item.to_timeline(timestamp))
-          # 更新内容
-          current_item.update_attributes(item)
-          current_item.timelines << timeline 
-          current_item.save
-        end
-        logger.info "同步：售罄、下架宝贝。"
+    def sync(threading, seller_nick, page_dom)
+      # 起始化
+      unless defined?(@threading)
+        @threading = threading
       end
-      logger.warn "同步批次号：#{timestamp}。"
+      if @threading.has_key?(seller_nick)
+        # 执行分页
+        each_pages(seller_nick, page_dom) if page_dom
+        # 批量处理，促销
+        # each_campaigns(seller_nick)
+        return @threading[seller_nick]
+      else
+        nil
+      end
     end
 
-    def sync(seller, timestamp, page_dom=nil)
-      @pages     = 0
-      @timestamp = Time.at(timestamp)
-      @seller    = seller
-      @crawler   = Crawler.new(seller.store_url)
-      @category  = nil # 分类
-      @campaign  = nil # 大促
-
-      if page_dom
-        logger.warn "店内无类目，仅同步宝贝数据。"
-        items_dom = init_items(page_dom)
-        if items_dom
-          each_items(items_dom)
-          each_pages
-        end
-      else
-        unless seller.categories.empty?
-          seller.categories.each do |category|
-            @category = category
-            page_dom  = get_page_dom
-            if page_dom
-              items_dom = init_items(page_dom)
-              if items_dom
-                each_items(items_dom)
-                each_pages
-              end
-            else
-              logger.info "店铺分类：#{category.cat_name}"
-            end
-          end
-          logger.info "同步：店内类目下宝贝。"
-        end
+    def recycling(threading, seller_nick, item_ids)  
+      # 起始化
+      unless defined?(@threading)
+        @threading = threading
       end
-      logger.warn "同步批次号：#{timestamp}。"
+      if @threading.has_key?(seller_nick)
+        item_ids.each do |item_id|
+          item = { num_iid: item_id, status: 'inventory', timestamp: @threading[:timestamp], category_ids: [], campaign_ids: [] }
+          # 获取销售信息
+          set_item_sales(seller_nick, item)
+        end
+        logger.warn "同步批次号：#{@threading[:timestamp]}。"
+        return @threading[seller_nick]
+      else
+        nil
+      end
+    end
+
+    def each_items(items)
+      logger.info "批量处理，宝贝信息。"
+      item_timelines = {}
+      items.each do |item_id, item|
+        current_item = Item.where(seller_nick: item[:seller_nick], _id: item_id).first
+        item[:campaign_ids] = item[:campaign_ids].uniq.compact # 去重、去空
+        item[:category_ids] = item[:category_ids].uniq.compact # 去重、去空
+        if current_item
+          # 设定历史版本，计算增量信息
+          timeline = current_item.item_timeline(item)
+          if timeline # 无差异，讲不形成记录
+            unless current_item.campaign_ids == item[:campaign_ids]
+              item[:campaign_ids] = (current_item.campaign_ids && item[:campaign_ids])
+            end
+            unless current_item.category_ids == item[:category_ids]
+              item[:category_ids] = (current_item.category_ids && item[:category_ids])
+            end
+            item[:timelines] = current_item.timelines << ItemTimeline.new(timeline)
+            current_item.update_attributes(item)
+            # 统计当量
+            item.delete(:timelines)
+            item[:timeline] = timeline
+          else
+            logger.warn "宝贝无变化，跳过。"
+          end
+        else
+          Item.create(item)
+        end
+        item_timelines[item_id] = item
+      end
+      return item_timelines
     end
 
     private
 
-    def get_page_dom(page=1)
-      params = { 'pageNum' => page }
-      if @category
-        params.merge!({'scid' => @category.cat_id}) 
-        logger.info "店铺分类：#{@category.cat_name}。"
-      end
-      @crawler.params = params
-      @crawler.item_search_url
-
-      return @crawler.get_dom
-    end
-
-    def get_items_dom(page_dom)
-      list = page_dom.at('div.shop-hesper-bd')
-      list = list.at('ul.shop-list') if list
-      list.css('li') if list
-    end
-
-    def get_total(page_dom)
-      search_dom = page_dom.at('div.search-result')
-      if search_dom
-        return search_dom.at('span').text.to_i 
-      else
-        items_dom = get_items_dom(page_dom)
-        if items_dom
-          pages = page_dom.at('div.shop-filter').at('span.page-info')
-          total = pages.split('/').last
-          return total * items_dom.count
-        end
-      end
-      0
-    end
-
-    def init_items(page_dom)
-      total = get_total(page_dom)
-      if total < 1
-        logger.error "本页没有货品。"
-      else
-        items_dom = get_items_dom(page_dom)
-        if items_dom
-          items_count = items_dom.count
-          logger.warn "共有货品 #{total}件，每页 #{items_count}件。"
-          @pages      = pages_count(total, items_count) if total > items_count
-          return items_dom
-        else
-          logger.error "咦~，共有#{total}件货品呀？"
-        end
-      end
-      nil
-    end
-
-    def each_pages
+    def each_pages(seller_id, page_dom=nil, page=2)
       # 分页执行
-      if @pages > 1
-        2.upto(@pages).each do |page|
-          page_dom  = get_page_dom(page)
+      if @threading[seller_id][:pages] > 1
+        pages = @threading[seller_id][:pages]
+        logger.warn "共 #{pages}页，开始执行分页操作。"
+        page.upto(pages).each do |page|
+          page_dom  = get_page_dom(seller_id, page)
           items_dom = get_items_dom(page_dom) if page_dom
-          each_items(items_dom) if items_dom
-          logger.warn "第 #{page}/#{@pages} 页。"
+          set_items(seller_id, items_dom) if items_dom
+          logger.warn "第 #{page}/#{pages} 页。"
+          @threading[seller_id][:page] = page # 设定当前页，以便断点续传
         end
-      else
-        logger.error "没有分页。"
-      end
-    end
-
-    def each_items(items_dom)
-      items_dom.each do |item_dom|
-        item = parse_item(item_dom)
-        if item
-          # 取值完毕，开始操作数据库
-          current_item = where(_id: item[:num_iid].to_i).last
-          if current_item
-            # 分类
-            if @category && !current_item.category_ids.include?(@category.cat_id)
-              current_item.categories << @category
-              current_item.save
-            end
-            # 内容无变更的update操作，updated_at也不会变更，新增synced_at字段，解决此问题
-            if current_item.synced_at < @timestamp
-              # 获取销售信息
-              set_item_sales(item)
-              # 设定历史版本
-              timeline = Timeline.new(current_item.to_timeline(@timestamp.to_i))
-              # 更新内容
-              current_item.update_attributes(item)
-              # 计算增量信息，必须在update后
-              current_item.campaigns << @campaign if @campaign
-              current_item.timelines << timeline 
-              current_item.save
-            else
-              logger.info "跳过，重复计算。"
+        @threading[seller_id][:pages] = 1 # 用后清零
+      elsif page_dom
+        total = get_total(page_dom)
+        if total < 1
+          logger.error "本页没有货品。"
+        else
+          items_dom = get_items_dom(page_dom)
+          if items_dom
+            set_items(seller_id, items_dom)
+            items_count = items_dom.count
+            if total > items_count
+              @threading[seller_id][:pages] = @threading[seller_id][:crawler].pages_count(total, items_count)
+              pages = @threading[seller_id][:pages]
+              logger.warn "货品共有 #{total}件，每页 #{items_count}件，分为 #{pages}页。"
+              each_pages(seller_id) if pages > 1 # 内循环，执行分页
             end
           else
-            set_item_sales(item)
-            item[:categories] = [@category] if @category
-            item[:campaigns]  = [@campaign] if @campaign
-            current_item      = @seller.items.create(item)
+            logger.error "咦~，共有#{total}件货品呀？"
           end
         end
       end
     end
 
-    def parse_item(item_dom)
-      item_link = item_dom.at('div.pic').at('a')
-      if item_link
-        num_iid   = parse_num_iid(item_link)
-        pic_url   = parse_pic_url(item_link)
-
-        title     = item_dom.at('div.desc').at('a').text.strip
-        price     = item_dom.at('div.price').at('strong').text[0..-3].to_f
-        total_num = item_dom.at('div.sales-amount').at('em').text.to_i
-        return { status: 'onsale', synced_at: @timestamp, num_iid: num_iid, outer_id: parse_outer_id(title), total_num: total_num, title: title, pic_url: pic_url, price: price }
-      end
-      nil
+    def get_page_dom(seller_id, page=1)
+      crawler = @threading[seller_id][:crawler]
+      crawler.params = { 'pageNum' => page }
+      crawler.item_search_url
+      return crawler.get_dom
     end
 
-    def parse_num_iid(link_dom)
-      return link_dom['href'][36..-2].to_i
-    end
-
-    def parse_pic_url(link_dom)
-      img_dom = link_dom.at('img')
-      pic_url = img_dom['data-ks-lazyload'] || img_dom['src']
-      if pic_url
-        pic_url.gsub!('_b.jpg', '')
-        pic_url.gsub!('_160x160.jpg', '')
-      end
-      return pic_url
-    end
-
-    def parse_outer_id(title)
-      title = title.gsub(/\p{Han}/, ',') # 剔汉字
-      arr   = title.split(',').compact.reverse
-      arr.each do |str|
-        return str.strip unless str.size < 3
-      end
-      nil
-    end
-
-    def set_item_sales(node)
-      # 宝贝销售数据
-      sales_json = @crawler.tmall_item_json(@seller.seller_id, node[:num_iid]) # 地址被改变
-      sales      = parse_sales(sales_json) if sales_json
-      node.merge!(sales)
-      # 宝贝收藏数
-      favs_count = @crawler.get_favs_count(node[:num_iid])
-      node[:favs_count] = favs_count if favs_count
-    end
-
-    def wenrentuan(pay_count, counts, prices) # 万人团，动态价格
-      counts.each_with_index do |count, i|
-        if pay_count > count
-          return prices[i].to_i
+    def set_items(seller_id, items_dom)
+      items_dom.each do |item_dom|
+        item = parse_item(seller_id, item_dom, @threading[:timestamp])
+        if item && !@threading[seller_id][:items].has_key?(item[:num_iid])
+          set_item_sales(seller_id, item)
         end
       end
-      return prices[0].to_i
     end
 
-    def to_date(timestamp) # 淘宝，时间戳转换
-      timestamp = timestamp.to_s
-      timestamp = timestamp.to_s[0..9] if timestamp.size > 10
-      return Time.at(timestamp.to_i)
+    def set_item_sales(seller_id, item)
+      item_id = item[:num_iid]
+      crawler = @threading[seller_id][:crawler]
+      json    = crawler.tmall_item_json(@threading[seller_id][:id], item_id) # 地址被改变 
+      if json # 宝贝销售数据
+        sales      = parse_sales(seller_id, item_id, json) # 解析
+        item.merge!(sales) # 合并
+        # 宝贝收藏数
+        favs_count = crawler.get_favs_count(item_id)
+        item[:favs_count] = favs_count if favs_count
+        # 注入集合
+        @threading[seller_id][:items][item_id] = item
+      else
+        logger.error "宝贝 #{item_id}，获取销售数据时出错。"
+      end
     end
 
-    def set_campaign(campaign) # 大促
+    def set_campaign(seller_id, item_id, campaign) # 大促
       start_at    = to_date(campaign['startTime'])
       end_at      = to_date(campaign['endTime'])
-      seller_nick = @seller._id
-      campaign_id = "#{seller_nick}-#{start_at.to_i}-#{end_at.to_i}"
-      
-      if !@campaign.nil? && @campaign._id == campaign_id
-        return @campaign
-      end
-
-      @campaign = Campaign.where(_id: campaign_id ).last
-      if @campaign.nil?
-        @campaign = Campaign.create({
-           seller_nick: seller_nick,
+      campaign_id = "#{seller_id}-#{start_at.to_i}-#{end_at.to_i}"
+      # 收集促销活动
+      campaigns = @threading[seller_id][:campaigns]
+      if campaigns.has_key?(campaign_id)
+        campaigns[campaign_id][:item_ids] << item_id
+      else
+        campaigns[campaign_id] = {
+           seller_nick: seller_id,
               start_at: start_at, 
                 end_at: end_at, 
                   name: campaign['campaignName'], 
               discount: (campaign['shopUnderFiftyPOff'] ? 50 : 100),
-                  plan: campaign['promotionPlan']
-        })
+                  plan: campaign['promotionPlan'],
+              item_ids: [item_id],
+             timestamp: @threading[:timestamp]
+        }
       end
+      return campaign_id
     end
 
-    def parse_sales(json)
-      sales  = {}
-      if json['isSuccess']
-        root = json['defaultModel']
-
-        month_num      = root['sellCountDO']['sellCount']
-        quantity       = root['inventoryDO']['icTotalQuantity']
-        skus_count     = root['inventoryDO']['skuQuantity'].count
-        sales[:status] = 'soldout' if quantity == 0 # 售罄
-        sales.merge!({ month_num: month_num, quantity: quantity, skus_count: skus_count })
-
-        item_price = root['itemPriceResultDO']
-        # 默认价格体系
-        prices     = item_price['priceInfo']
-        price_info = prices[prices.keys[0]]
-
-        if price_info && price_info['price']
-          price             = price_info['price'].to_f    # 原价
-          tag_price         = price_info['tagPrice'].to_f # 吊牌价
-          sales[:tag_price] = tag_price
-          # 大促
-          if item_price['campaignInfo']
-            set_campaign(item_price['campaignInfo'])
-          else
-            @campaign = nil # 清除，大促信息
-          end
-          # 优惠
-          if price_info['promPrice']
-            prom = price_info['promPrice']
-            prom_type  = prom['type']
-            # 优惠价
-            prom_price   = if prom_type == '万人团' && item_price['wanrentuanInfo']
-              wanrentuan = item_price['wanrentuanInfo']
-              pay_count  = wanrentuan['groupUC'].to_i                # 当前购买数
-              counts     = wanrentuan['wrtLevelNeedCounts'].reverse  # 购买等级
-              prices     = wanrentuan['wrtLevelFinalPrices'].reverse # 价格等级
-              (wenrentuan(pay_count, counts, prices) / 100)
-            else
-              prom['price'].to_f  
-            end
-
-          sales[:prom_price]     = prom_price.round(2)
-          sales[:prom_type]      = prom_type
-          sales[:prom_discount]  = prom_price / price * 100
-          end
-        end
-        if root['deliveryDO']['deliverySkuMap']['default'][0]['postage'] = '商家承担运费'
-          sales[:post_fee] = true
-        end
-      else
-        logger.fatal "模板变更需要调整：#{@crawler.request.url}"
-      end
-      return sales
-    end
-
-    def pages_count(total, size=20)
-      page = (total / size.to_f).to_i
-      page += 1 if (total % size) > 0
-      return page
-    end
+    include BaseParse
+    include ItemParse
   end
 end

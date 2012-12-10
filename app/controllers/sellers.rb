@@ -29,8 +29,7 @@ Meta.controllers :sellers do
   end
   
   get :show, with: :seller_id, provides: [:html, :csv] do
-    @seller = Seller.where(_id: params[:seller_id].force_encoding('utf-8')).last
-    if @seller
+    if current_seller
       case content_type
         when :html
           case
@@ -54,9 +53,6 @@ Meta.controllers :sellers do
             send_file file_csv, type: 'text/csv', filename: File.basename(file_csv)
           end
         end
-    else
-      flash[:error] = '哦，人品大爆发，无此店铺~'
-      redirect url(:sellers, :index)
     end
   end
 end
