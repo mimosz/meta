@@ -32,4 +32,16 @@ Meta.helpers do
     end
     return file_csv
   end
+
+  def status_tag(content, status, label='label')
+    css = case status
+    when 'onsale'
+      'label-success'
+    when 'soldout'
+      'label-inverse'
+    when 'inventory'
+      'label-warning'
+    end
+    content_tag(:span, content, class: "#{label} #{css}")
+  end
 end

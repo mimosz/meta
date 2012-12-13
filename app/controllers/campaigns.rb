@@ -6,6 +6,7 @@ Meta.controllers :campaigns, parent: :sellers do
   end
 
   get :index do
+    @campaigns = @seller.campaigns
     render 'campaigns/index'
   end
 end

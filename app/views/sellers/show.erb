@@ -1,147 +1,67 @@
-<table id='items' class='table table-bordered table-striped table-hover'>
+
+<table id='<%= @seller.seller_id %>' class='table table-bordered table-striped table-hover'>
   <thead>
-    <% if @items.total_count > @page_size %>
-      <tr class=''>
-        <td style="text-align:right;" colspan='17'>
-         第 <%= @items.offset_value + 1 %> - <%= @items.offset_value + @page_size %>，共 <%= @items.total_count %>
+    <tr>
+      <th>同步时间</th>
+      <th>宝贝数</th>
+      <th>在售</th>
+      <th>售罄</th>
+      <th>下架</th>
+      <th>库存</th>
+      <th>销售额</th>
+      <th>款数</th>
+      <th>总销量</th>
+      <th>销售额</th>
+      <th>收藏量</th>
+      <th>促销</th>
+    </tr>
+  </thead>
+  <tbody>
+  <% if @seller.timelines.empty? %>
+    <tr><td colspan='10'>等待数据中...</td></tr>
+  <% else %>
+    <% @seller.timelines.each do |timeline| %>
+      <tr id='<%= timeline._id %>'>
+       <td><%= local_time(timeline.timestamp) %></td>
+       <td><%= timeline.items_count %></td>
+       <td><%= timeline.onsales_count %></td>
+       <td><%= timeline.soldouts_count %></td>
+       <td><%= timeline.inventories_count %></td>
+
+       <td><%= timeline.quantity %></td>
+       <td>&nbsp;</td>
+       <td><%= timeline.skus_count %></td>
+       
+       <td><%= timeline.total_num %></td>
+       <td>&nbsp;</td>
+       <td><%= timeline.favs_count %></td>
+        <td>
+          <% if timeline.proms.empty? %>
+            无
+          <% else %>
+            <% timeline.proms.each do |prom| %>
+              <span class='label badge-inverse'><%= prom %></span>
+            <% end %>
+          <% end %>
         </td>
       </tr>
-    <% end %>
-    <tr>
-      <th>宝贝ID</th>
-      <th>商家编码</th>
-      <th>吊牌价</th>
-      <th>售价</th>
-      <th>快递</th>
-      <th>活动</th>
-      <th>活动售价</th>
-      <th>活动折扣</th>
-      <th><%= @campaign ? @campaign.name : '大促' %></th>
-      <th>月销量</th>
-      <th>总销量</th>
-      <th>剩余库存</th>
-      <th>收藏数</th>
-      <th>SKU数</th>
-      <th>销售状态</th>
-      <th>标题</th>
-      <th>#</th>
-    </tr>
-  <thead>
-  <% unless @items.empty? %>  
-    <tbody class="accordion-group"> 
-    <% @items.each do |item| %>
-        <tr id='<%= item.num_iid %>' class='accordion-heading'>
-          <td><abbr title='<%= item.synced_at.in_time_zone.strftime("%m月%d日 %H时") %>' class='initialism'><%= item.num_iid %></abbr></td>
-          <td><%= item.outer_id %></td>
-          <td><%= item.tag_price %></td>
-          <td><%= item.price %></td>
-          <td><%= "<span class='label label-warning'>包邮</span>" if item.post_fee %></td>
-          <td><%= item.prom_type if item.prom_type %></td>
-          <td><%= item.prom_price %></td>
-          <td><%= item.prom_discount %>%</td>
-          <td>
-            <% if @campaign %>
-              <% if @campaign.discount < 100 %>
-                <%= (item.tag_price*(@campaign.discount/100.to_f)).round(2) %>
-              <% else %>
-                近30天最低
-              <% end %>
-            <% else %>
-              <% if item.campaigns.pre.exists? %>
-                <ul class='nav nav-list'>
-                <% item.campaigns.pre.each do |campaign| %>
-                  <li><%= link_to campaign.name, url(:sellers, :show, seller_id: @seller._id, campaign_id: campaign._id) %></li>
-                <% end %>
-                </ul>
-              <% end %>
-            <% end %>
-          </td>
-          <td title='月销量'><%= item.month_num %></td>
-          <td title='总销量'><%= item.total_num %></td>
-          <td title='剩余库存'><%= item.quantity %></td>
-          <td title='收藏数'><%= item.favs_count %></td>
-          <td title='SKU数'><%= item.skus_count %></td>
-          <td><%= item.show_status %></td>
-          <td><%= link_to item.title, item.item_url %></td>
-          <td>
-            <a class="btn btn-mini" data-toggle="collapse" data-parent="#items" href="#item-<%= item.num_iid %>-categories">分类</a>
-            <a class="btn btn-mini" data-toggle="collapse" data-parent="#items" href="#item-<%= item.num_iid %>-timelines">历史</a>
-          </td>
+      <% unless timeline.increment.nil? %>
+        <tr class='warning'>
+          <th><%= timeline.increment.duration %>小时，差值</th>
+          <td><%= timeline.increment.items_count %></td>
+          <td colspan='3'>&nbsp;</td>
+          <td><%= timeline.increment.quantity %></td>
+          <td><%= timeline.increment.qty_sales.round(2) %></td>
+          <td><%= timeline.increment.skus_count %></td>
+
+          <td><%= timeline.increment.total_num %></td>
+          <td><%= timeline.increment.total_sales.round(2) %></td>
+
+          <td><%= timeline.increment.favs_count %></td>
+          <td>&nbsp;</td>
         </tr>
-        <% if item.categories.exists? %>
-        <tr>
-          <td colspan="16" style="height:0px;padding:0px;border-top:0px;">
-            <div id="item-<%= item.num_iid %>-categories" class="accordion-body collapse">
-              <div class="accordion-inner" style="line-height:25px;">
-                <ul class='nav nav-pills'>
-                  <% item.categories.each do |category| %>
-                    <% if @category &&  category._id == @category._id %>
-                      <li id='<%= category.cat_id %>' class='active' ><a><%= category.cat_name %></a></li>
-                    <% else %>
-                      <li id='<%= category.cat_id %>'><%= link_to category.cat_name, url( :sellers, :show, seller_id: @seller._id, category_id: category.cat_id ) %></li>
-                    <% end %>
-                  <% end %>
-                </ul>
-              </div>
-            </div>
-          </td>
-        </tr>
-        <% end %>
-        <% unless item.timelines.nil? %>
-        <tr>
-          <td colspan="16" style="height:0px;padding:0px;border-top:0px;">
-            <div id="item-<%= item.num_iid %>-timelines" class="accordion-body collapse">
-              <div class="accordion-inner" style="line-height:25px;">
-                <table class='table table-bordered table-striped table-hover'>
-                  <thead>
-                    <tr>
-                      <th>时间</th>
-                      <th>商家编码</th>
-                      <th>售价</th>
-                      <th>快递</th>
-                      <th>活动</th>
-                      <th>活动售价</th>
-                      <th>活动折扣</th>
-                      <th>月销量</th>
-                      <th>总销量</th>
-                      <th>剩余库存</th>
-                      <th>收藏数</th>
-                      <th>SKU数</th>
-                      <th>销售状态</th>
-                      <th>标题</th>
-                    </tr>
-                  <thead>
-                <% item.timelines.each do |timeline| %>
-                  <tr class='success'>
-                    <td><%= timeline.synced_at.in_time_zone.strftime("%m月%d日 %H时") %></td>
-                    <td><%= timeline.outer_id %></td>
-                    <% unless timeline.increment.nil? %>
-                      <td><%= timeline.increment.price %></td>
-                      <td><%= "<span class='label label-warning'>包邮</span>" if timeline.post_fee %></td>
-                      <td><%= timeline.prom_type if timeline.prom_type %></td>
-                      <td><%= timeline.increment.prom_price %></td>
-                      <td><%= timeline.increment.prom_discount %>%</td>
-                      <td title='月销量'><%= timeline.increment.month_num %></td>
-                      <td title='总销量'><%= timeline.increment.total_num %></td>
-                      <td title='剩余库存'><%= timeline.increment.quantity %></td>
-                      <td title='收藏数'><%= timeline.increment.favs_count %></td>
-                      <td title='SKU数'><%= timeline.increment.skus_count %></td>
-                    <% end %>
-                    <td><%= timeline.show_status %></td>
-                    <td><%= timeline.title %></td>
-                  </tr>
-                <% end %>
-              </table>
-            </div>
-          </td>
-        </tr>
-        <% end %>
       <% end %>
-    </tbody>
-  <% else %>
-    <tr>
-      <td colspan='17'>没货品～～</td>
-    </tr>
+    <% end %>
   <% end %>
+  </tbody>
 </table>
-<%= paginate @items, theme: 'twitter_bootstrap', window: 4 %>

@@ -1,10 +1,11 @@
+<% content_for :header do %>
 <% form_for :seller, url(:sellers, :create), class: 'form-inline', style: 'text-align: center;' do |f| %>
   <div class='input-append'>
     <%= f.text_field :store_url, placeholder: 'http://newbalance.tmall.com' %>
     <%= f.submit '添加店铺', class:'btn btn-warning' %>
   </div>
 <% end %>
-
+<% end %>
 <h3>店铺列表</h3>
 <table id="sellers" class="table table-bordered">
   <thead>
@@ -18,7 +19,6 @@
     <tr>
       <th>店铺名称</th>
       <th>主营</th>
-      <th>#</th>
       <th>最后同步时间</th>
     </tr>
   <thead>
@@ -26,19 +26,19 @@
     <tbody>
     <% @sellers.each do |seller| %>
         <tr>
-          <td><%= link_to seller.seller_nick, seller.store_url %></td>
-          <td><%= seller.label %></td>
           <td>
-            <%= link_to '全部货品', url(:sellers, :show, seller_id: seller._id) %>
+            <%= link_to seller.seller_nick, url(:sellers, :show, seller_id: seller._id) %>
             <%= link_to "<i class='icon-time'></i>", url(:resque, :index, seller_id: seller._id) %>
+            <%= link_to "<i class='icon-share'></i>", seller.store_url, target:'_blank' %>
           </td>
-          <td><%= local_time(seller.synced_at) %></td>
+          <td><%= link_to seller.label, url(:sellers, :index, label: seller.label) %></td>
+          <td><%= local_time(seller.timestamp) %></td>
         </tr>
       <% end %>
     </tbody>
   <% else %>
     <tr>
-      <td colspan="4">没货品～～</td>
+      <td colspan="3">没货品～～</td>
     </tr>
   <% end %>
 </table>

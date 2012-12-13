@@ -1,4 +1,34 @@
 # -*- encoding: utf-8 -*-
+module InitSync
+  def init_item(id, nick, store_url)
+    # 起始化
+    unless defined?(@threading)
+      @threading = { timestamp: Time.now.to_i }
+    end
+    # 初始值
+    unless @threading.has_key?(nick)
+      crawler = Crawler.new(store_url)
+      crawler.item_search_url
+
+      @threading[nick] = { seller_nick: nick, seller_id: id, crawler: crawler, pages: 1, page: 1, campaigns:  {}, categories: {}, items: {} }
+      logger.info "#{nick}，宝贝抓取准备就绪。"
+    end
+  end
+
+  def init_category(nick, threading)
+    # 起始化
+    unless defined?(@threading)
+      @threading = { timestamp: Time.now.to_i }
+    end
+    # 初始值
+    unless @threading.has_key?(nick)
+      @threading[nick] = threading
+      logger.info "#{nick}，分类抓取准备就绪。"
+    end
+  end
+
+end
+
 module BaseParse # 分类、宝贝，需要调用。
   def get_items_dom(page_dom)
     list = page_dom.at('div.shop-hesper-bd')
@@ -80,54 +110,49 @@ module ItemParse
     return ::Time.at(timestamp.to_i)
   end
 
-  def parse_sales(seller_id, item_id, json)
-    sales  = {}
-    if json['isSuccess']
-      root = json['defaultModel']
+  def parse_sales(seller_id, item, json)
+    root = json['defaultModel']
 
-      sales[:month_num]  = root['sellCountDO']['sellCount']
-      sales[:quantity]   = root['inventoryDO']['icTotalQuantity']
-      sales[:skus_count] = root['inventoryDO']['skuQuantity'].count
-      sales[:status]     = 'soldout' if sales[:quantity] == 0 # 售罄
+    item[:month_num]  = root['sellCountDO']['sellCount']
+    item[:quantity]   = root['inventoryDO']['icTotalQuantity']
+    item[:skus_count] = root['inventoryDO']['skuQuantity'].count
+    item[:status]     = 'soldout' if item[:quantity] == 0 # 售罄
 
-      item_price = root['itemPriceResultDO']
-      # 默认价格体系
-      prices     = item_price['priceInfo']
-      price_info = prices[prices.keys[0]]
+    item_price = root['itemPriceResultDO']
+    # 默认价格体系
+    prices     = item_price['priceInfo']
+    price_info = prices[prices.keys[0]]
 
-      if price_info && price_info['price']
-        price             = price_info['price'].to_f    # 原价
-        tag_price         = price_info['tagPrice'].to_f # 吊牌价
-        sales[:tag_price] = tag_price
-        # 大促
-        sales[:campaign_ids] << set_campaign(seller_id, item_id, item_price['campaignInfo']) if item_price['campaignInfo']
-        # 优惠
-        if price_info['promPrice']
-          prom = price_info['promPrice']
-          prom_type  = prom['type']
-          # 优惠价
-          prom_price   = if prom_type == '万人团' && item_price['wanrentuanInfo']
-            wanrentuan = item_price['wanrentuanInfo']
-            pay_count  = wanrentuan['groupUC'].to_i                # 当前购买数
-            counts     = wanrentuan['wrtLevelNeedCounts'].reverse  # 购买等级
-            prices     = wanrentuan['wrtLevelFinalPrices'].reverse # 价格等级
-            (wenrentuan(pay_count, counts, prices) / 100)
-          else
-            prom['price'].to_f  
-          end
-
-        sales[:prom_price]     = prom_price.round(2)
-        sales[:prom_type]      = prom_type
-        sales[:prom_discount]  = prom_price / price * 100
+    if price_info && price_info['price']
+      price             = price_info['price'].to_f    # 原价
+      tag_price         = price_info['tagPrice'].to_f # 吊牌价
+      item[:tag_price] = tag_price
+      # 大促
+      item[:campaign_ids] << set_campaign(seller_id, item[:num_iid], item_price['campaignInfo']) if item_price['campaignInfo']
+      # 优惠
+      if price_info['promPrice']
+        prom = price_info['promPrice']
+        prom_type  = prom['type']
+        # 优惠价
+        prom_price   = if prom_type == '万人团' && item_price['wanrentuanInfo']
+          wanrentuan = item_price['wanrentuanInfo']
+          pay_count  = wanrentuan['groupUC'].to_i                # 当前购买数
+          counts     = wanrentuan['wrtLevelNeedCounts'].reverse  # 购买等级
+          prices     = wanrentuan['wrtLevelFinalPrices'].reverse # 价格等级
+          (wenrentuan(pay_count, counts, prices) / 100)
+        else
+          prom['price'].to_f  
         end
+
+      item[:prom_price]     = prom_price.round(2)
+      item[:prom_type]      = prom_type
+      item[:prom_discount]  = prom_price / price * 100
       end
-      if root['deliveryDO']['deliverySkuMap']['default'][0]['postage'] = '商家承担运费'
-        sales[:post_fee] = true
-      end
-    else
-      logger.fatal "宝贝的JSON数据模板，需要调整。"
     end
-    return sales
+    if root['deliveryDO']['deliverySkuMap']['default'][0]['postage'] = '商家承担运费'
+      item[:post_fee] = true
+    end
+    return item
   end
 end
 
@@ -242,18 +267,25 @@ module TimelineParse
     timeline[:skus_count]  += item[:skus_count]
 
     timeline[:items_count]  += 1
-
+    
     case item[:status]
     when 'onsale'
-      timeline[:onsales] = ([item[:num_iid]] && timeline[:onsales])
+      timeline[:onsales] = (timeline[:onsales] << item[:num_iid]).uniq
     when 'soldout'
-      timeline[:soldouts] = ([item[:num_iid]] && timeline[:soldouts])
+      timeline[:soldouts] = (timeline[:soldouts] << item[:num_iid]).uniq
     when 'inventory'
-      timeline[:inventories] = ([item[:num_iid] ]&& timeline[:inventories])
+      timeline[:inventories] = (timeline[:inventories] << item[:num_iid]).uniq
     end
-    timeline[:proms] = ([item[:prom_type] ]&&  timeline[:proms]) if item[:prom_type]
 
-    if item.has_key?(:timeline)
+    timeline[:proms] = (timeline[:proms] << item[:prom_type]).uniq if item[:prom_type]
+
+    if item.has_key?(:timeline) # 参见 Item.each_items # 205
+      unless timeline.has_key?(:increment)
+        timeline[:increment] = ActiveSupport::JSON.decode(
+          Increment.new( duration: item[:timeline][:increment][:duration] ).to_json
+        ).symbolize_keys
+        logger.warn '创建差异。'
+      end
       timeline[:increment][:total_num] += item[:timeline][:increment][:total_num]
       timeline[:increment][:month_num] += item[:timeline][:increment][:month_num]
       timeline[:increment][:quantity]  += item[:timeline][:increment][:quantity]
@@ -268,7 +300,7 @@ module TimelineParse
   end
 
   def each_timelines(items, item_ids=[])
-    timeline = ActiveSupport::JSON.decode(Timeline.new(increment: Increment.new).to_json).symbolize_keys
+    timeline = ActiveSupport::JSON.decode(Timeline.new().to_json).symbolize_keys
     items.each do |id, item|
       if item_ids.empty?
         timeline_sum(timeline, item)

@@ -31,6 +31,10 @@ class Campaign
     Item.where(seller_nick: seller_nick).in(_id: item_ids)
   end
 
+  def items_count
+    item_ids.count
+  end
+
   class << self
     def each_campaigns(campaigns, items)
       logger.info "批量处理，促销信息。"
@@ -38,9 +42,14 @@ class Campaign
         campaign[:item_ids] = campaign[:item_ids].uniq.compact # 去重、去空
         timeline = Timeline.new(each_timelines(items, campaign[:item_ids]))
         current_campaign = Campaign.where(seller_nick: campaign[:seller_nick], _id: id).first
-        if current_campaign && current_campaign.item_ids != campaign[:item_ids]
-          current_campaign[:timelines] = current_campaign.timelines << timeline
-          current_campaign.update_attributes( timestamp: campaign[:timestamp], item_ids: (current_campaign.item_ids && campaign[:item_ids]) )
+        if current_campaign
+          if current_campaign.item_ids == campaign[:item_ids]
+            campaign.delete(:item_ids)
+          else
+            campaign[:item_ids] = (current_campaign.item_ids << campaign[:item_ids]).uniq
+          end
+          campaign[:timelines] = (current_campaign.timelines << timeline).uniq
+          current_campaign.update_attributes(campaign)
         else
           create(campaign.merge!(timelines: [timeline]))
         end

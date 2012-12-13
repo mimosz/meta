@@ -11,6 +11,20 @@ class Timeline < Metadata # 店铺、分类、促销，历史数据
   field :proms,       type: Array,   default: [] # 活动
 
   field :items_count, type: Integer, default: 0 # 宝贝数
+
+  default_scope desc(:_id) # 默认排序
+
+  def onsales_count
+    onsales.count
+  end
+
+  def soldouts_count
+    soldouts.count
+  end
+
+  def inventories_count
+    inventories.count
+  end
   
 end
 

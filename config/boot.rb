@@ -71,8 +71,6 @@ Padrino.after_load do
   end
 
   Sidekiq::Scheduler.dynamic = true
-
-  Redis.current = Redis.connect( url: REDIS_URL, namespace: 'meta')
 end
 
 Padrino.load!

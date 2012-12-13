@@ -49,9 +49,10 @@ Meta.helpers do
     end
   end
 
-  def local_time(time)
-    if time
-      time.in_time_zone.strftime("%m月%d日 %H时")
+  def local_time(timestamp)
+    if timestamp
+      # time.in_time_zone
+      Time.at(timestamp).strftime("%m月%d日 %H时")
     else
       '期待数据中..'
     end

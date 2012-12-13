@@ -68,32 +68,13 @@ class Seller
   end
 
   def sync(error_count = 0)
-    # 起始化
-    unless defined?(@threading)
-      timestamp = Time.now.to_i
-      @threading = { timestamp: timestamp }
-    end
-    # 初始值
-    unless @threading.has_key?(_id)
-      @threading[_id] = { seller_id: seller_id, seller_nick: seller_nick, crawler: Crawler.new(store_url), pages: 1, page: 1, campaigns:  {}, categories: {}, items: {} }
-      @threading[_id][:crawler].item_search_url
-      logger.info "#{_id}，数据抓取准备就绪。"
-    end
-    page_dom = @threading[_id][:crawler].get_dom # 获取首页对象
-    if page_dom.nil?
-      @threading.delete(_id)
-      logger.error "#{_id}，抓取错误，任务被清除。"
-    else
-      @threading[_id] = Item.sync(@threading, _id, page_dom) # 店铺宝贝
-      # 下架或售罄同步
-      item_onsales_count = @threading[_id][:items].keys.count
-      if item_onsales_count > 0 && items_count > item_onsales_count
-        unknown_ids = self.item_ids - @threading[_id][:items].keys
-        unless unknown_ids.empty?
-          @threading[_id] = Item.recycling(@threading, _id, unknown_ids) 
-        end
-      end
-      if @threading[_id][:items].empty?
+    crawler  = Crawler.new(store_url)
+    crawler.item_search_url
+    page_dom = crawler.get_dom # 获取首页对象
+
+    unless page_dom.nil?
+      threading = Item.sync(self, page_dom) # 店铺宝贝
+      if threading[:items].empty?
         if error_count < 3
           error_count += 1
           logger.error "数据丢失，将开始 第#{error_count}次 重试。"
@@ -101,24 +82,17 @@ class Seller
           sync(error_count)
         else
           logger.error "三次失败，放弃吧~~"
-          @threading.delete(_id)
+          return nil
         end
       else
         # 店铺分类
-        @threading[_id] = Category.sync(@threading, _id, page_dom) # 分类及宝贝归类。
-        @threading[_id][:items] = Item.each_items(@threading[_id][:items]) # 写入宝贝数据，获取数值变化。
-        Category.each_categories( @threading[_id][:categories], @threading[_id][:items] )
-        Campaign.each_campaigns(  @threading[_id][:campaigns],  @threading[_id][:items] )
+        threading = Category.sync(threading, page_dom) # 分类及宝贝归类。
+        threading[:items] = Item.each_items(threading[:items]) # 写入宝贝数据，获取数值变化。
+        Category.each_categories( threading[:categories], threading[:items] )
+        Campaign.each_campaigns(  threading[:campaigns],  threading[:items] )
         # 更新店铺
-        timeline = Timeline.new( Seller.each_timelines( @threading[_id][:items] ) )
-        update_attributes(timelines: (timelines << timeline), items_count: @threading[_id][:items].keys.count, timestamp: @threading[:timestamp])
-        # 清场
-        @threading[_id][:items].clear
-        @threading.delete(_id)
-        if @threading.count == 1
-          logger.error "批次：#{@threading[:timestamp]}，同步结束。"
-          remove_instance_variable(:@threading)
-        end
+        timeline = Timeline.new( Seller.each_timelines( threading[:items] ) )
+        update_attributes(timelines: (timelines << timeline), items_count: threading[:items].keys.count, timestamp: Time.now.to_i)
       end
     end
   end

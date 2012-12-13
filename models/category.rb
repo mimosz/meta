@@ -40,34 +40,35 @@ class Category
     Item.where(seller_nick: seller_nick).in(_id: item_ids)
   end
 
+  def items_count
+    item_ids.count
+  end
+
   class << self
-    def sync(threading, seller_nick, page_dom)
+    def sync(threading, page_dom)
       # 起始化
-      unless defined?(@threading)
-        @threading = threading
+      nick = threading[:seller_nick]
+      init_category(nick, threading)
+      # 解析分类
+      cats_dom = get_cats_dom(page_dom)
+
+      cats     = if cats_dom # 淘宝系统，树形分类
+        each_cats(nick, cats_dom)              
+      else # 自定义分类
+        logger.warn "店铺，自定义分类"
+        get_cats(nick, page_dom)
       end
-      if @threading.has_key?(seller_nick)
-        @threading[seller_nick][:crawler].item_search_url
-        # 解析分类
-        cats_dom = get_cats_dom(page_dom)
-        if cats_dom # 淘宝系统，树形分类
-          each_cats(seller_nick, cats_dom)              
-        else # 自定义分类
-          logger.warn "店铺，自定义分类"
-          get_cats(seller_nick, page_dom)
-        end
-        # 收集宝贝
-        if @threading[seller_nick][:categories].empty?
-          logger.warn "店铺，没有分类。"
-        else
-          category_ids = @threading[seller_nick][:categories].keys
-          category_ids.each do |category_id|
-            each_pages(seller_nick, category_id)
-          end
-        end
-        return @threading[seller_nick]
+      # 收集宝贝
+      if cats.empty?
+        logger.warn "店铺，没有分类。"
+        return threading
       else
-        nil
+        @threading[nick][:categories] = cats
+        category_ids = @threading[nick][:categories].keys
+        category_ids.each do |category_id|
+          each_pages(nick, category_id)
+        end
+        return @threading[nick]
       end
     end
 
@@ -80,11 +81,17 @@ class Category
           category[:item_ids] = category[:item_ids].uniq.compact # 去重、去空
           timeline = Timeline.new(each_timelines(items, category[:item_ids]))
           current_category = Category.where(seller_nick: category[:seller_nick], _id: category[:cat_id]).first
-          if current_category && current_category.item_ids != category[:item_ids]
-            current_category[:timelines] = current_category.timelines << timeline
-            current_category.update_attributes( timestamp: category[:timestamp], item_ids: (current_category.item_ids && category[:item_ids]) )
+          if current_category
+            if current_category.item_ids == category[:item_ids]
+              category.delete(:item_ids)
+            else
+              category[:item_ids] = (current_category.item_ids << category[:item_ids]).uniq
+            end
+            category[:timelines] = (current_category.timelines << timeline).uniq
+            current_category.update_attributes( category )
           else
-            create( category.merge!(timelines: [timeline]) )
+            category[:timelines] = [timeline]
+            create( category )
           end
         end
       end
@@ -103,17 +110,9 @@ class Category
 
     private
 
-    def init(seller, items={}) # 设置，实例变量
-      @threading  = {} unless defined?(@threading)
-      # 店铺，初始值
-      unless @threading.has_key?(seller._id)
-        @threading[seller._id] = { crawler: Crawler.new(seller.store_url), pages: 1, categories:  {}, items: items  }
-        @threading[seller._id][:crawler].item_search_url
-      end
-    end
-
     def get_page_dom(seller_id, category_id, page=1)
       crawler = @threading[seller_id][:crawler]
+      crawler.item_search_url
       crawler.params = { 'scid' => category_id, 'pageNum' => page }
       logger.info "店铺分类：#{@threading[seller_id][:categories][category_id][:cat_name]}。"
       return crawler.get_dom
@@ -171,34 +170,42 @@ class Category
 
     def get_cats(seller_id, page_dom) # 自定义分类
       links = page_dom.css('a')
-      cats  = @threading[seller_id][:categories]
+      cats  = {}
       links.each do |link|
         cat = find_cat(link)
-        if cat
-          cats[cat[:cat_id]] = cat unless cats.has_key?(cat[:cat_id])
+        if cat && !cats.has_key?(cat[:cat_id])
+          cat[:seller_nick]  = seller_id
+          cat[:timestamp]    = @threading[seller_id][:timestamp]
+          cats[cat[:cat_id]] = cat 
         end
       end
+      return cats
     end
 
     def each_cats(seller_id, cats_dom, priority=0, parent_id=nil)
-      cats = @threading[seller_id][:categories]
+      cats = {}
       cats_dom.each do |cat_dom|
         case cat_dom[:class]
         when 'cat J_CatHeader' # 淘宝系统分类
           next # 跳过
         end
         cat = parse_cat(cat_dom, priority, parent_id)
-        if cat
-          cats[cat[:cat_id]] = cat unless cats.has_key?(cat[:cat_id])
-          priority += 1
+        if cat && !cats.has_key?(cat[:cat_id])
+          cat[:seller_nick]  = seller_id
+          cat[:timestamp]    = @threading[seller_id][:timestamp]
+          cats[cat[:cat_id]] = cat     
         end
         children_dom = cat_dom.css('li')
         if children_dom # 是否含子类
-          priority = each_cats(seller_id, children_dom, priority, cat[:cat_id])
+          children = each_cats(seller_id, children_dom, priority, cat[:cat_id])
+          cats.merge!(children)
         end
+        priority += 1
       end
-      return priority
+      return cats
     end
+
+    include InitSync
     include BaseParse
     include CategoryParse 
     include TimelineParse
