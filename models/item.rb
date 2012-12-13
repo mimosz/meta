@@ -1,5 +1,4 @@
 # -*- encoding: utf-8 -*-
-require 'redis/hash_key'
 
 class Item
   include Mongoid::Document
