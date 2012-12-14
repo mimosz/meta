@@ -1,5 +1,4 @@
-<% unless @campaigns.empty? %>
-<table class='table table-bordered table-striped table-hover'>
+<table id="campaigns" class='table table-bordered table-striped table-hover'>
   <thead>
     <tr>
       <th colspan='2'>&nbsp;</th>
@@ -41,51 +40,54 @@
       <th>占比</th>
     </tr>
   </thead>
-  <% @campaigns.each do |campaign| %>
-    <tr id='<%= campaign._id %>'>
-     <td><%= nest_name(campaign.to_s) %></td>
-     <td><%= local_time(campaign.start_at.to_i) %> ~ <%= local_time(campaign.end_at.to_i) %></td>
-     <td><%= campaign.items_count %></td>
-     <td><%= percent(campaign.items_count, @seller.items_count) %></td>
-     <% if campaign.timelines.empty? %>
-        <td colspan='13'>等待数据中...</td>
-     <% else %>
-        <td><%= campaign.timelines.last.onsales_count %></td>
-        <td><%= campaign.timelines.last.soldouts_count %></td>
-        <td><%= campaign.timelines.last.inventories_count %></td>
-        <td>
-          <% if campaign.timelines.last.proms.empty? %>
-            无
-          <% else %>
-            <% campaign.timelines.last.proms.each do |prom| %>
-              <span class='label badge-inverse'><%= prom %></span>
-            <% end %>
-          <% end %>
-        </td>
-       <td><%= campaign.timelines.last.total_num %></td>
-       <td><%= percent(campaign.timelines.last.total_num, @seller.timelines.last.total_num) %></td>
-       <td><%= campaign.timelines.last.quantity %></td>
-       <td><%= percent(campaign.timelines.last.quantity, @seller.timelines.last.quantity) %></td>
-       <td><%= campaign.timelines.last.favs_count %></td>
-       <td><%= percent(campaign.timelines.last.favs_count, @seller.timelines.last.favs_count) %></td>
-     <% end %>
-    </tr>
-    <% unless campaign.timelines.last.increment.nil? %>
-        <tr class='warning'>
-          <th><%= campaign.timelines.last.increment.duration %>小时，差值</th>
-          <td><%= campaign.timelines.last.increment.items_count %></td>
-          <td colspan='3'>&nbsp;</td>
-          <td><%= campaign.timelines.last.increment.quantity %></td>
-          <td><%= campaign.timelines.last.increment.qty_sales.round(2) %></td>
-          <td><%= campaign.timelines.last.increment.skus_count %></td>
-
-          <td><%= campaign.timelines.last.increment.total_num %></td>
-          <td><%= campaign.timelines.last.increment.total_sales.round(2) %></td>
-
-          <td><%= campaign.timelines.last.increment.favs_count %></td>
-          <td>&nbsp;</td>
+  <% unless @campaigns.empty? %>
+    <tbody>
+      <% @campaigns.each do |campaign| %>
+        <tr id='<%= campaign._id %>'>
+         <td><%= nest_name(campaign.to_s) %></td>
+         <td><%= local_time(campaign.start_at.to_i) %> ~ <%= local_time(campaign.end_at.to_i) %></td>
+         <td><%= campaign.items_count %></td>
+         <td><%= percent(campaign.items_count, @seller.items_count) %></td>
+         <% if campaign.timelines.empty? %>
+            <td colspan='13'>等待数据中...</td>
+         <% else %>
+            <td><%= campaign.timelines.last.onsales_count %></td>
+            <td><%= campaign.timelines.last.soldouts_count %></td>
+            <td><%= campaign.timelines.last.inventories_count %></td>
+            <td>
+              <% if campaign.timelines.last.proms.empty? %>
+                无
+              <% else %>
+                <% campaign.timelines.last.proms.each do |prom| %>
+                  <span class='label badge-inverse'><%= prom %></span>
+                <% end %>
+              <% end %>
+            </td>
+           <td><%= campaign.timelines.last.total_num %></td>
+           <td><%= percent(campaign.timelines.last.total_num, @seller.timelines.last.total_num) %></td>
+           <td><%= campaign.timelines.last.quantity %></td>
+           <td><%= percent(campaign.timelines.last.quantity, @seller.timelines.last.quantity) %></td>
+           <td><%= campaign.timelines.last.favs_count %></td>
+           <td><%= percent(campaign.timelines.last.favs_count, @seller.timelines.last.favs_count) %></td>
+         <% end %>
         </tr>
+        <% unless campaign.timelines.last.increment.nil? %>
+            <tr class='warning'>
+              <th><%= campaign.timelines.last.increment.duration %>小时，差值</th>
+              <td><%= campaign.timelines.last.increment.items_count %></td>
+              <td colspan='3'>&nbsp;</td>
+              <td><%= campaign.timelines.last.increment.quantity %></td>
+              <td><%= campaign.timelines.last.increment.qty_sales.round(2) %></td>
+              <td><%= campaign.timelines.last.increment.skus_count %></td>
+
+              <td><%= campaign.timelines.last.increment.total_num %></td>
+              <td><%= campaign.timelines.last.increment.total_sales.round(2) %></td>
+
+              <td><%= campaign.timelines.last.increment.favs_count %></td>
+              <td>&nbsp;</td>
+            </tr>
+          <% end %>
       <% end %>
+    </tbody>
   <% end %>
 </table>
-<% end %>

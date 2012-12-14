@@ -25,6 +25,8 @@ class Seller
   # Fields
   field :seller_id,   type: Integer
   field :shop_id,     type: Integer
+  field :user_tag,    type: Integer
+  
   field :items_count, type: Integer, default: 0
 
   field :uid,         type: String   # 用户字符串ID
@@ -54,8 +56,9 @@ class Seller
       info_list = page_dom.at('div.personal-info').at('ul').css('li')
       company   = info_list[0].at('div.fleft2').text.strip
       label     = info_list[1].at('a').text.strip
+      user_tag  = page_dom.at('input#userTag')[:value].to_i
       # 更新
-      update_attributes(company: company, label: label)
+      update_attributes(company: company, label: label, user_tag: user_tag)
     end
   end
 

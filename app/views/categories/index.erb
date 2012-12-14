@@ -1,5 +1,4 @@
-<% unless @categories.empty? %>
-<table class='table table-bordered table-striped table-hover'>
+<table id="categories" class='table table-bordered table-striped table-hover'>
   <thead>
     <tr>
       <th colspan='2'>&nbsp;</th>
@@ -41,99 +40,102 @@
       <th>占比/款数</th>
     </tr>
   </thead>
-  <% @categories.each do |category| %>
-    <tr id='<%= category._id %>'>
-     <td><%= link_to nest_name(category.to_s), url(:items, :index, seller_id: @seller._id, category_id: category._id ) %></td>
-     <td>&nbsp;</td>
-     <td><%= category.items_count %></td>
-     <td><%= percent(category.items_count, @seller.items_count) %></td>
-     <% if category.timelines.empty? %>
-        <td colspan='13'>等待数据中...</td>
-     <% else %>
-        <% last_timeline = category.timelines.first %>
-        <td><%= last_timeline.onsales_count %></td>
-        <td><%= last_timeline.soldouts_count %></td>
-        <td><%= last_timeline.inventories_count %></td>
-        <td>
-          <% if last_timeline.proms.empty? %>
-            无
-          <% else %>
-            <% last_timeline.proms.each do |prom| %>
-              <span class='label badge-inverse'><%= prom %></span>
-            <% end %>
-          <% end %>
-        </td>
-       <td><%= last_timeline.total_num %></td>
-       <td><%= percent(last_timeline.total_num, @seller.timelines.last.total_num) %></td>
-       <td><%= last_timeline.quantity %></td>
-       <td><%= percent(last_timeline.quantity, @seller.timelines.last.quantity) %></td>
-       <td><%= last_timeline.favs_count %></td>
-       <td><%= percent(last_timeline.favs_count, @seller.timelines.last.favs_count) %></td>
-     <% end %>
-    </tr>
-    <% unless last_timeline.increment.nil? %>
-        <% increment = last_timeline.increment %>
-        <tr class='warning'>
-          <td><%= increment.duration %>小时，差值</td>
-          <td>&nbsp;</td>
-          <td><%= increment.items_count %></td>
-          <td colspan='5'>&nbsp;</td>
-          <td><%= increment.total_num %></td>
-          <td><%= increment.total_sales.round(2) %></td>
-          <td><%= increment.quantity %></td>
-          <td><%= increment.qty_sales.round(2) %></td>
-          <td><%= increment.favs_count %></td>
-          <td><%= increment.skus_count %></td>
-        </tr>
-      <% end %>
-    <% unless category.children.empty? %>
-      <% category.children.each do |child| %>
-        <tr id='<%= child._id %>'> 
-        <td>&nbsp;</td>
-        <td><%= nest_name(child.to_s) %></td> 
-        <td><%= child.items_count %></td>
-        <td><%= percent(child.items_count, @seller.items_count) %></td>
-        <% if child.timelines.empty? %>
-          <td colspan='13'>等待数据中...</td>
-        <% else %>
-          <% last_timeline = child.timelines.first %>
-          <td><%= last_timeline.onsales_count %></td>
-          <td><%= last_timeline.soldouts_count %></td>
-          <td><%= last_timeline.inventories_count %></td>
-          <td>
-            <% if last_timeline.proms.empty? %>
-              无
-            <% else %>
-              <% last_timeline.proms.each do |prom| %>
-                <span class='label badge-inverse'><%= prom %></span>
+  <% unless @categories.empty? %>
+    <tbody>
+      <% @categories.each do |category| %>
+        <tr id='<%= category._id %>'>
+         <td><%= link_to nest_name(category.to_s), url(:items, :index, seller_id: @seller._id, category_id: category._id ) %></td>
+         <td>&nbsp;</td>
+         <td><%= category.items_count %></td>
+         <td><%= percent(category.items_count, @seller.items_count) %></td>
+         <% if category.timelines.empty? %>
+            <td colspan='13'>等待数据中...</td>
+         <% else %>
+            <% last_timeline = category.timelines.first %>
+            <td><%= last_timeline.onsales_count %></td>
+            <td><%= last_timeline.soldouts_count %></td>
+            <td><%= last_timeline.inventories_count %></td>
+            <td>
+              <% if last_timeline.proms.empty? %>
+                无
+              <% else %>
+                <% last_timeline.proms.each do |prom| %>
+                  <span class='label badge-inverse'><%= prom %></span>
+                <% end %>
               <% end %>
-            <% end %>
-          </td>
-          <td><%= last_timeline.total_num %></td>
-          <td><%= percent(last_timeline.total_num, @seller.timelines.last.total_num) %></td>
-          <td><%= last_timeline.quantity %></td>
-          <td><%= percent(last_timeline.quantity, @seller.timelines.last.quantity) %></td>
-          <td><%= last_timeline.favs_count %></td>
-          <td><%= percent(last_timeline.favs_count, @seller.timelines.last.favs_count) %></td>
-        <% end %>
+            </td>
+           <td><%= last_timeline.total_num %></td>
+           <td><%= percent(last_timeline.total_num, @seller.timelines.last.total_num) %></td>
+           <td><%= last_timeline.quantity %></td>
+           <td><%= percent(last_timeline.quantity, @seller.timelines.last.quantity) %></td>
+           <td><%= last_timeline.favs_count %></td>
+           <td><%= percent(last_timeline.favs_count, @seller.timelines.last.favs_count) %></td>
+         <% end %>
         </tr>
         <% unless last_timeline.increment.nil? %>
-          <% increment = last_timeline.increment %>
-          <tr class='warning'>
+            <% increment = last_timeline.increment %>
+            <tr class='warning'>
+              <td><%= increment.duration %>小时，差值</td>
+              <td>&nbsp;</td>
+              <td><%= increment.items_count %></td>
+              <td colspan='5'>&nbsp;</td>
+              <td><%= increment.total_num %></td>
+              <td><%= increment.total_sales.round(2) %></td>
+              <td><%= increment.quantity %></td>
+              <td><%= increment.qty_sales.round(2) %></td>
+              <td><%= increment.favs_count %></td>
+              <td><%= increment.skus_count %></td>
+            </tr>
+          <% end %>
+        <% unless category.children.empty? %>
+          <% category.children.each do |child| %>
+            <tr id='<%= child._id %>'> 
             <td>&nbsp;</td>
-            <td><%= increment.duration %>小时，差值</td>
-            <td><%= increment.items_count %></td>
-            <td colspan='5'>&nbsp;</td>
-            <td><%= increment.total_num %></td>
-            <td><%= increment.total_sales.round(2) %></td>
-            <td><%= increment.quantity %></td>
-            <td><%= increment.qty_sales.round(2) %></td>
-            <td><%= increment.favs_count %></td>
-            <td><%= increment.skus_count %></td>
-          </tr>
+            <td><%= nest_name(child.to_s) %></td> 
+            <td><%= child.items_count %></td>
+            <td><%= percent(child.items_count, @seller.items_count) %></td>
+            <% if child.timelines.empty? %>
+              <td colspan='13'>等待数据中...</td>
+            <% else %>
+              <% last_timeline = child.timelines.first %>
+              <td><%= last_timeline.onsales_count %></td>
+              <td><%= last_timeline.soldouts_count %></td>
+              <td><%= last_timeline.inventories_count %></td>
+              <td>
+                <% if last_timeline.proms.empty? %>
+                  无
+                <% else %>
+                  <% last_timeline.proms.each do |prom| %>
+                    <span class='label badge-inverse'><%= prom %></span>
+                  <% end %>
+                <% end %>
+              </td>
+              <td><%= last_timeline.total_num %></td>
+              <td><%= percent(last_timeline.total_num, @seller.timelines.last.total_num) %></td>
+              <td><%= last_timeline.quantity %></td>
+              <td><%= percent(last_timeline.quantity, @seller.timelines.last.quantity) %></td>
+              <td><%= last_timeline.favs_count %></td>
+              <td><%= percent(last_timeline.favs_count, @seller.timelines.last.favs_count) %></td>
+            <% end %>
+            </tr>
+            <% unless last_timeline.increment.nil? %>
+              <% increment = last_timeline.increment %>
+              <tr class='warning'>
+                <td>&nbsp;</td>
+                <td><%= increment.duration %>小时，差值</td>
+                <td><%= increment.items_count %></td>
+                <td colspan='5'>&nbsp;</td>
+                <td><%= increment.total_num %></td>
+                <td><%= increment.total_sales.round(2) %></td>
+                <td><%= increment.quantity %></td>
+                <td><%= increment.qty_sales.round(2) %></td>
+                <td><%= increment.favs_count %></td>
+                <td><%= increment.skus_count %></td>
+              </tr>
+            <% end %>
+          <% end %>
         <% end %>
       <% end %>
-    <% end %>
+    </tbody>
   <% end %>
 </table>
-<% end %>

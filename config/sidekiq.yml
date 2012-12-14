@@ -5,3 +5,4 @@
 :pidfile: ./tmp/pids/sidekiq.pid
 :namespace: meta
 :dynamic: true
+:verbose: false

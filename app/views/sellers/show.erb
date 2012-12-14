@@ -16,10 +16,8 @@
       <th>促销</th>
     </tr>
   </thead>
-  <tbody>
-  <% if @seller.timelines.empty? %>
-    <tr><td colspan='10'>等待数据中...</td></tr>
-  <% else %>
+  <% unless @seller.timelines.empty? %>
+    <tbody>
     <% @seller.timelines.each do |timeline| %>
       <tr id='<%= timeline._id %>'>
        <td><%= local_time(timeline.timestamp) %></td>
@@ -62,6 +60,6 @@
         </tr>
       <% end %>
     <% end %>
+    </tbody>
   <% end %>
-  </tbody>
 </table>

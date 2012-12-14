@@ -5,7 +5,7 @@
   <thead>
     <% if @items.total_count > @page_size %>
       <tr class=''>
-        <td style="text-align:right;" colspan='17'>
+        <td style="text-align:right;" colspan='16'>
          第 <%= @items.offset_value + 1 %> - <%= @items.offset_value + @page_size %>，共 <%= @items.total_count %>
         </td>
       </tr>
@@ -144,10 +144,6 @@
         <% end %>
       <% end %>
     </tbody>
-  <% else %>
-    <tr>
-      <td colspan='16'>没货品～～</td>
-    </tr>
   <% end %>
 </table>
 <%= paginate @items, theme: 'twitter_bootstrap', window: 4 %>

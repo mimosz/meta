@@ -11,7 +11,7 @@
   <thead>
     <% if @sellers.total_count > @page_size %>
       <tr>
-        <td style="text-align:right;" colspan='3'>
+        <td style="text-align:right;" colspan='4'>
          第 <%= @sellers.offset_value + 1 %> - <%= @sellers.offset_value + @page_size %>，共 <%= @sellers.total_count %>
         </td>
       </tr>
@@ -19,6 +19,7 @@
     <tr>
       <th>店铺名称</th>
       <th>主营</th>
+      <th>公司</th>
       <th>最后同步时间</th>
     </tr>
   <thead>
@@ -32,14 +33,11 @@
             <%= link_to "<i class='icon-share'></i>", seller.store_url, target:'_blank' %>
           </td>
           <td><%= link_to seller.label, url(:sellers, :index, label: seller.label) %></td>
+          <td><%= seller.company %></td>
           <td><%= local_time(seller.timestamp) %></td>
         </tr>
       <% end %>
     </tbody>
-  <% else %>
-    <tr>
-      <td colspan="3">没货品～～</td>
-    </tr>
   <% end %>
 </table>
 <%= paginate @sellers, theme: 'twitter_bootstrap', window: 4 %>

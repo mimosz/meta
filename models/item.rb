@@ -132,7 +132,7 @@ class Item
     def sync(seller, page_dom)
       # 起始化
       seller_nick = seller.seller_nick
-      init_item(seller.seller_id, seller_nick, seller.store_url)
+      init_item(seller.user_tag, seller_nick, seller.store_url)
       # 执行分页
       item_ids = each_pages(seller_nick, page_dom)
       # 下架或售罄同步
@@ -147,9 +147,7 @@ class Item
         unknown_ids = seller.item_ids - item_ids
         unless unknown_ids.empty?
           item_ids.each do |item_id|
-            item = ActiveSupport::JSON.decode(
-              Item.new(num_iid: num_iid, status: 'inventory', timestamp: @threading[:timestamp]).to_json
-            ).symbolize_keys
+            item = { num_iid: item_id, status: 'inventory', timestamp: @threading[:timestamp] }
             # 获取销售信息
             item = set_item_sales(seller_nick, item)
             if item
@@ -244,22 +242,15 @@ class Item
     def set_items(seller_id, items_dom)
       item_ids = []
       items_dom.each do |item_dom|
-        item = parse_item(seller_id, item_dom, @threading[:timestamp])
-        if item && !@threading[seller_id][:items].has_key?(item[:num_iid])
-          item = set_item_sales(seller_id, item)
-          if item
-            # 注入集合
-            @threading[seller_id][:items][item[:num_iid]] = item
-            item_ids << item[:num_iid]
-          end
-        end
+        item_id = set_item(seller_id, item_dom)
+        item_ids << item_id if item_id
       end
       return item_ids
     end
 
     def set_item_sales(seller_id, item, try_count=0)
       crawler = @threading[seller_id][:crawler]
-      json    = crawler.tmall_item_json(@threading[seller_id][:id], item[:num_iid]) # 地址被改变 
+      json    = crawler.tmall_item_json(@threading[seller_id][:seller_tag], item[:num_iid]) # 地址被改变 
       if json && json['isSuccess'] # 宝贝销售数据
         item = parse_sales(seller_id, item, json) # 解析
         # 宝贝收藏数
@@ -267,11 +258,10 @@ class Item
         item[:favs_count] = favs_count if favs_count
         return item
       else
-        if try_count < 3
+        if try_count < 30
           try_count += 1
-          logger.error json
-          logger.error "宝贝 #{item[:num_iid]}，获取销售数据出错，第#{try_count}次重试。"
-          sleep try_count
+          logger.error "宝贝 #{item[:num_iid]}，获取销售数据出错，#{try_count}分钟后，重试。"
+          sleep try_count.minutes.to_f
           return set_item_sales(seller_id, item, try_count)
         else
           logger.error "宝贝 #{item[:num_iid]}，#{try_count}次重试失败，我放弃啦~"

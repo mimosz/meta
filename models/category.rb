@@ -158,14 +158,24 @@ class Category
       items_dom.each do |item_dom|
         item_link = item_dom.at('div.pic').at('a')
         num_iid   = parse_num_iid(item_link) if item_link
-        if num_iid && @threading[seller_id][:items].has_key?(num_iid)
-          # 收集，分类中的宝贝
-          @threading[seller_id][:categories][category_id][:item_ids] << num_iid
-          @threading[seller_id][:items][num_iid][:category_ids] << category_id
-        else
-          logger.error "出现错误，宝贝ID：#{num_iid}，分类ID：#{category_id}"
+        if num_iid 
+          if @threading[seller_id][:items].has_key?(num_iid)
+            set_threading(seller_id, num_iid, category_id)
+          else
+            item_id = set_item(seller_id, item_dom)
+            if item_id
+              set_threading(seller_id, item_id, category_id)
+            else
+              logger.error "出现错误，宝贝ID：#{num_iid}，分类ID：#{category_id}"
+            end
+          end
         end
       end
+    end
+    # 收集，分类中的宝贝
+    def set_threading(seller_id, item_id, category_id)
+      @threading[seller_id][:categories][category_id][:item_ids] << item_id
+      @threading[seller_id][:items][item_id][:category_ids] << category_id
     end
 
     def get_cats(seller_id, page_dom) # 自定义分类

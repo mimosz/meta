@@ -82,60 +82,41 @@ class Crawler
     return dom
   end
 
-  def taobao_item_json(seller_id, num_iid)
-    self.url     = item_taobao_url
-    self.params  = { 
-      ump: false, 
-      itemId: num_iid, 
-      sellerId: seller_id, 
-      templateId: 0,
-      isWrtTag: false,
-      isAreaSell: false,
-      isSellerPay: true,
-      isSpu: true,
-      tgTag: false,
-      isSecKill: false,
-      itemWeight: 0,
-      tmallBuySupport: true,
-      campaignType: 0,
-      callback: 'item' 
-    }
-    self.headers = { 'Referer' => item_url(num_iid) }
-
-    html = get_json
-    if html
-      html = html.force_encoding("GBK").encode("UTF-8")
-      json = html.match(/item\((.*)\)/)[1]
-      if json
-        pp json
-        return ActiveSupport::JSON.decode(json)
-      end
-    else
-      puts "模板变更需要调整：#{request.url}"
-    end
-    nil
-  end
-
-  def tmall_item_json(seller_id, num_iid)
+  def tmall_item_json(seller_tag, num_iid)
     self.url     = item_tmall_url
     self.params  = { 
-      ump: false, 
-      itemId: num_iid, 
-      sellerId: seller_id, 
-      templateId: 0,
-      isWrtTag: false,
+      deliveryOption: 0,
+      ump: true,
+      trialErrNum: 0,
+      isSpu: false,
+      isIFC: false,
+      notAllowOriginPrice: false,
+      isForbidBuyItem: false,
       isAreaSell: false,
-      isSellerPay: true,
-      isSpu: true,
-      tgTag: false,
-      isSecKill: false,
-      itemWeight: 0,
+      isWrtTag: false,
       tmallBuySupport: true,
-      campaignType: 0,
-      callback: 'item' 
+      isMeizTry: false,
+      sellerUserTag: seller_tag,
+      household: false,
+      tgTag: false,
+      itemId: num_iid,
+      isUseInventoryCenter: false,
+      itemWeight: 0,
+      isSecKill: false,
+      isApparel: true,
+      service3C: false,
+      cartEnable: true,
+      callback:'item',
+      ip: nil,
+      campaignId: nil,
+      key: nil,
+      abt: nil,
+      cat_id: nil,
+      q: nil,
+      u_channel: nil,
+      ref: nil,  
     }
-    self.headers = { 'Referer' => item_url(num_iid) }
-
+    self.headers = { 'User-Agent' => switcher, 'Referer' => item_url(num_iid) }
     html = get_json
     if html
       html = html.force_encoding("GBK").encode("UTF-8")
@@ -190,7 +171,7 @@ class Crawler
   end
 
   def item_url(num_iid)
-    'http://item.taobao.com/item.htm?id=' + num_iid.to_s
+    'http://detail.tmall.com/item.htm?id=' + num_iid.to_s
   end
 
   def item_taobao_url

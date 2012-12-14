@@ -1,6 +1,6 @@
 # -*- encoding: utf-8 -*-
 module InitSync
-  def init_item(id, nick, store_url)
+  def init_item(tag, nick, store_url)
     # 起始化
     unless defined?(@threading)
       @threading = { timestamp: Time.now.to_i }
@@ -10,7 +10,7 @@ module InitSync
       crawler = Crawler.new(store_url)
       crawler.item_search_url
 
-      @threading[nick] = { seller_nick: nick, seller_id: id, crawler: crawler, pages: 1, page: 1, campaigns:  {}, categories: {}, items: {} }
+      @threading[nick] = { seller_nick: nick, seller_tag: tag, crawler: crawler, pages: 1, page: 1, campaigns:  {}, categories: {}, items: {} }
       logger.info "#{nick}，宝贝抓取准备就绪。"
     end
   end
@@ -30,6 +30,19 @@ module InitSync
 end
 
 module BaseParse # 分类、宝贝，需要调用。
+  def set_item(seller_id, item_dom)
+    item = Item.parse_item(seller_id, item_dom, @threading[:timestamp])
+    if item && !@threading[seller_id][:items].has_key?(item[:num_iid])
+      item = set_item_sales(seller_id, item)
+      if item
+        # 注入集合
+        @threading[seller_id][:items][item[:num_iid]] = item
+        return item[:num_iid]
+      end
+    end
+    return nil
+  end
+
   def get_items_dom(page_dom)
     list = page_dom.at('div.shop-hesper-bd')
     list = list.at('ul.shop-list') if list
