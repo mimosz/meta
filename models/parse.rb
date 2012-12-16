@@ -10,7 +10,7 @@ module InitSync
       crawler = Crawler.new(store_url)
       crawler.item_search_url
 
-      @threading[nick] = { seller_nick: nick, seller_tag: tag, crawler: crawler, pages: 1, page: 1, campaigns:  {}, categories: {}, items: {} }
+      @threading[nick] = { seller_nick: nick, seller_tag: tag, crawler: crawler, pages: 1, page: 1, campaigns: {}, categories: {}, items: {}, retries: {} }
       logger.info "#{nick}，宝贝抓取准备就绪。"
     end
   end
@@ -30,10 +30,18 @@ module InitSync
 end
 
 module BaseParse # 分类、宝贝，需要调用。
+  def proxyer
+    proxy_list = [
+      "122.225.22.22:8080", 
+      "218.84.126.82:3128"
+    ]
+    "http://#{proxy_list.sample}"
+  end
+
   def set_item(seller_id, item_dom)
     item = Item.parse_item(seller_id, item_dom, @threading[:timestamp])
     if item && !@threading[seller_id][:items].has_key?(item[:num_iid])
-      item = set_item_sales(seller_id, item)
+      item = Item.set_item_sales(seller_id, item)
       if item
         # 注入集合
         @threading[seller_id][:items][item[:num_iid]] = item
@@ -121,6 +129,30 @@ module ItemParse
     timestamp = timestamp.to_s
     timestamp = timestamp.to_s[0..9] if timestamp.size > 10
     return ::Time.at(timestamp.to_i)
+  end
+
+  def set_item_sales(seller_id, item, try_count=0)
+    crawler = @threading[seller_id][:crawler]
+    json    = crawler.tmall_item_json(@threading[seller_id][:id], item[:num_iid]) # 地址被改变 
+    if json && json['isSuccess'] # 宝贝销售数据
+      # @threading[seller_id][:crawler].request.proxy = nil
+      item = parse_sales(seller_id, item, json) # 解析
+      # 宝贝收藏数
+      favs_count = crawler.get_favs_count(item[:num_iid])
+      item[:favs_count] = favs_count if favs_count
+      return item
+    else
+      if try_count < 15
+        # @threading[seller_id][:crawler].request.proxy = proxyer
+        logger.error "宝贝 #{item[:num_iid]}，获取数据出错，#{try_count}分钟后，重试。"
+        sleep try_count.minutes.to_f
+        return set_item_sales(seller_id, item, (try_count+4))
+      else
+        logger.error "宝贝 #{item[:num_iid]}，#{try_count}次重试失败，我放弃啦~"
+        @threading[seller_id][:retries][item[:num_iid]] = item
+        return nil
+      end
+    end
   end
 
   def parse_sales(seller_id, item, json)

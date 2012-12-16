@@ -114,7 +114,7 @@ class Crawler
       cat_id: nil,
       q: nil,
       u_channel: nil,
-      ref: nil,  
+      ref: 'http://brand.tmall.com',  
     }
     self.headers = { 'User-Agent' => switcher, 'Referer' => item_url(num_iid) }
     html = get_json

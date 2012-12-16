@@ -3,7 +3,7 @@
 # Defines our constants
 PADRINO_ENV  = ENV['PADRINO_ENV'] ||= ENV['RACK_ENV'] ||= 'development'  unless defined?(PADRINO_ENV)
 PADRINO_ROOT = File.expand_path('../..', __FILE__) unless defined?(PADRINO_ROOT)
-REDIS_URL    = 'redis://192.168.0.135:6379' unless defined?(REDIS_URL)
+REDIS_URL    = 'redis://127.0.0.1:6379' unless defined?(REDIS_URL)
 ENV['RAILS_ENV'] ||= PADRINO_ENV
 
 # Load our dependencies

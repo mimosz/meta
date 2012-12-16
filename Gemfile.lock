@@ -78,6 +78,7 @@ GEM
     erubis (2.7.0)
     eventmachine (1.0.0)
     facter (1.6.14)
+    ffi (1.2.0)
     ffi (1.2.0-java)
     grape (0.2.2)
       activesupport
@@ -142,6 +143,8 @@ GEM
     redis (3.0.2)
     redis-namespace (1.2.1)
       redis (~> 3.0.0)
+    redis-objects (0.6.1)
+      redis (>= 3.0.2)
     rubyzip (0.9.9)
     rufus-scheduler (2.0.17)
       tzinfo (>= 0.3.23)
@@ -213,6 +216,7 @@ DEPENDENCIES
   origin
   padrino!
   rake
+  redis-objects
   sidekiq
   sidekiq-scheduler
   sinatra-flash

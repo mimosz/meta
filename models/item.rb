@@ -1,4 +1,5 @@
 # -*- encoding: utf-8 -*-
+require 'redis/hash_key'
 
 class Item
   include Mongoid::Document
@@ -129,12 +130,36 @@ class Item
 
   class << self
 
+    def sync_retry(seller_id, item_ids, try_count=0)
+      if @threading[seller_id][:retries].empty?
+        return item_ids
+      end
+      if try_count > 0
+        logger.error "获取销售数据出错，#{try_count}分钟后，重试。"
+        sleep try_count.minutes.to_f
+      end
+      @threading[seller_id][:retries].each do |item_id, item|
+        # 获取销售信息
+        item = set_item_sales(seller_id, item)
+        if item
+          logger.warn "成功获取：#{item_id}，宝贝信息。"
+          item_ids << item_id
+          @threading[seller_id][:items][item_id] = item
+          @threading[seller_id][:retries].delete(item_id)
+        else
+          logger.error "宝贝：#{item_id}，加入下一轮，重试队列。"
+        end
+      end
+      return sync_retry(seller_id, item_ids, (try_count+4))
+    end
+
     def sync(seller, page_dom)
       # 起始化
       seller_nick = seller.seller_nick
       init_item(seller.user_tag, seller_nick, seller.store_url)
       # 执行分页
       item_ids = each_pages(seller_nick, page_dom)
+      item_ids = sync_retry(seller_nick, item_ids)
       # 下架或售罄同步
       return recycling(seller, item_ids.uniq)
     end
@@ -146,7 +171,7 @@ class Item
       if seller.items_count > 0 && seller.items_count > items_count
         unknown_ids = seller.item_ids - item_ids
         unless unknown_ids.empty?
-          item_ids.each do |item_id|
+          unknown_ids.each do |item_id|
             item = { num_iid: item_id, status: 'inventory', timestamp: @threading[:timestamp] }
             # 获取销售信息
             item = set_item_sales(seller_nick, item)
@@ -155,6 +180,7 @@ class Item
               @threading[seller_nick][:items][item[:num_iid]] = item
             end
           end
+          unknown_ids = sync_retry(seller_nick, unknown_ids)
         end
       end
       logger.warn "同步批次号：#{@threading[:timestamp]}。"
@@ -166,8 +192,12 @@ class Item
       item_timelines = {}
       items.each do |item_id, item|
         current_item = Item.where(seller_nick: item[:seller_nick], _id: item_id).first
-        item[:campaign_ids] = item[:campaign_ids].uniq.compact # 去重、去空
-        item[:category_ids] = item[:category_ids].uniq.compact # 去重、去空
+        if item.has_key(:campaign_ids)
+          item[:campaign_ids] = item[:campaign_ids].compact.uniq # 去重、去空
+        end
+        if item.has_key?(:category_ids)
+          item[:category_ids] = item[:category_ids].compact.uniq # 去重、去空
+        end
         if current_item
           # 设定历史版本，计算增量信息
           timeline = current_item.item_timeline(item)
@@ -246,28 +276,6 @@ class Item
         item_ids << item_id if item_id
       end
       return item_ids
-    end
-
-    def set_item_sales(seller_id, item, try_count=0)
-      crawler = @threading[seller_id][:crawler]
-      json    = crawler.tmall_item_json(@threading[seller_id][:seller_tag], item[:num_iid]) # 地址被改变 
-      if json && json['isSuccess'] # 宝贝销售数据
-        item = parse_sales(seller_id, item, json) # 解析
-        # 宝贝收藏数
-        favs_count = crawler.get_favs_count(item[:num_iid])
-        item[:favs_count] = favs_count if favs_count
-        return item
-      else
-        if try_count < 30
-          try_count += 1
-          logger.error "宝贝 #{item[:num_iid]}，获取销售数据出错，#{try_count}分钟后，重试。"
-          sleep try_count.minutes.to_f
-          return set_item_sales(seller_id, item, try_count)
-        else
-          logger.error "宝贝 #{item[:num_iid]}，#{try_count}次重试失败，我放弃啦~"
-          return nil
-        end
-      end
     end
     
     def set_campaign(seller_id, item_id, campaign) # 大促

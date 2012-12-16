@@ -1,4 +1,5 @@
 # -*- encoding: utf-8 -*-
+require 'redis/hash_key'
 
 class Campaign
   include Mongoid::Document

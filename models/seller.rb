@@ -1,4 +1,5 @@
 # -*- encoding: utf-8 -*-
+require 'redis/hash_key'
 
 class Seller
   include Mongoid::Document

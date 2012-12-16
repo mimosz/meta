@@ -2,7 +2,7 @@
 # Options here can still be overridden by cmd line args.
 #   sidekiq -C config.yml
 ---
-:pidfile: ./tmp/pids/sidekiq.pid
+:pidfile: /tmp/sidekiq.pid
 :namespace: meta
 :dynamic: true
 :verbose: false
