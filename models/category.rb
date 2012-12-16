@@ -176,6 +176,9 @@ class Category
     # 收集，分类中的宝贝
     def set_threading(seller_id, item_id, category_id)
       @threading[seller_id][:categories][category_id][:item_ids] << item_id
+      unless @threading[seller_id][:items][item_id].has_key?(:category_ids)
+        @threading[seller_id][:items][item_id][:category_ids] = []
+      end
       @threading[seller_id][:items][item_id][:category_ids] << category_id
     end
 
