@@ -300,12 +300,12 @@ module TimelineParse
   def timeline_sum(timeline, item)
     # 售价
     price = if item.has_key?(:prom_price) && item[:prom_price] > 0
-      item[:prom_price]
+      item[:prom_price].to_f
     else
-      item[:price]
+      item[:price].to_f
     end
     # 货值
-    timeline[:price] += price * item[:quantity]
+    timeline[:price] += price * item[:quantity].to_i
     # 
     timeline[:total_num] += item[:total_num]
     timeline[:month_num] += item[:month_num]
