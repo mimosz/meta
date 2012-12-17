@@ -192,7 +192,7 @@ class Item
       item_timelines = {}
       items.each do |item_id, item|
         current_item = Item.where(seller_nick: item[:seller_nick], _id: item_id).first
-        if item.has_key(:campaign_ids)
+        if item.has_key?(:campaign_ids)
           item[:campaign_ids] = item[:campaign_ids].compact.uniq # 去重、去空
         end
         if item.has_key?(:category_ids)
