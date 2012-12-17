@@ -173,6 +173,9 @@ module ItemParse
       tag_price         = price_info['tagPrice'].to_f # 吊牌价
       item[:tag_price] = tag_price
       # 大促
+      unless item.has_key?(:campaign_ids)
+        item[:campaign_ids] = []
+      end
       item[:campaign_ids] << set_campaign(seller_id, item[:num_iid], item_price['campaignInfo']) if item_price['campaignInfo']
       # 优惠
       if price_info['promPrice']
