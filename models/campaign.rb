@@ -37,22 +37,31 @@ class Campaign
   end
 
   class << self
-    def each_campaigns(campaigns, items)
+    def each_campaigns(campaigns, items, timestamp)
       logger.info "批量处理，促销信息。"
       campaigns.each do |id, campaign|
-        campaign[:item_ids] = campaign[:item_ids].uniq.compact # 去重、去空
-        timeline = Timeline.new(each_timelines(items, campaign[:item_ids]))
         current_campaign = Campaign.where(seller_nick: campaign[:seller_nick], _id: id).first
+        
+        campaign[:item_ids] = campaign[:item_ids].uniq.compact # 去重、去空
+        timeline = each_timelines(items, timestamp, campaign[:item_ids])
+        
         if current_campaign
+          # 
           if current_campaign.item_ids == campaign[:item_ids]
             campaign.delete(:item_ids)
           else
-            campaign[:item_ids] = (current_campaign.item_ids << campaign[:item_ids]).uniq
+            campaign[:item_ids] = (current_campaign.item_ids + campaign[:item_ids]).uniq
           end
-          campaign[:timelines] = (current_campaign.timelines << timeline).uniq
+          # 
+          if timeline.is_a?(Hash) 
+            timeline_arr = ActiveSupport::JSON.decode(current_campaign.timelines.to_json)
+            timeline_arr << timeline
+            campaign[:timelines] = timeline_arr.uniq
+          end
           current_campaign.update_attributes(campaign)
         else
-          create(campaign.merge!(timelines: [timeline]))
+          campaign[:timelines] = [timeline]
+          create(campaign)
         end
       end
     end

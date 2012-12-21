@@ -297,7 +297,7 @@ module SellerParse
 end
 
 module TimelineParse
-  def timeline_sum(timeline, item)
+  def timeline_sum(timeline, item, timestamp)
     # 售价
     price = if item.has_key?(:prom_price) && item[:prom_price] > 0
       item[:prom_price].to_f
@@ -307,14 +307,14 @@ module TimelineParse
     # 货值
     timeline[:price] += price * item[:quantity].to_i
     # 
-    timeline[:total_num] += item[:total_num]
-    timeline[:month_num] += item[:month_num]
-    timeline[:quantity]  += item[:quantity]
+    timeline[:total_num].to_i += item[:total_num].to_i
+    timeline[:month_num].to_i += item[:month_num].to_i
+    timeline[:quantity].to_i  += item[:quantity].to_i
 
-    timeline[:favs_count]  += item[:favs_count]
-    timeline[:skus_count]  += item[:skus_count]
+    timeline[:favs_count].to_i  += item[:favs_count].to_i
+    timeline[:skus_count].to_i  += item[:skus_count].to_i
 
-    timeline[:items_count]  += 1
+    timeline[:items_count].to_i  += 1
     
     case item[:status]
     when 'onsale'
@@ -329,31 +329,33 @@ module TimelineParse
 
     if item.has_key?(:timeline) # 参见 Item.each_items # 205
       unless timeline.has_key?(:increment)
+        # 时间间隔，小时
+        duration = ((Time.now.to_i - timestamp).to_f / 3600).round(2)
+        # 创建差异
         timeline[:increment] = ActiveSupport::JSON.decode(
-          Increment.new( duration: item[:timeline][:increment][:duration] ).to_json
+          Increment.new(duration: duration).to_json
         ).symbolize_keys
-        logger.warn '创建差异。'
       end
-      timeline[:increment][:total_num] += item[:timeline][:increment][:total_num]
-      timeline[:increment][:month_num] += item[:timeline][:increment][:month_num]
-      timeline[:increment][:quantity]  += item[:timeline][:increment][:quantity]
+      timeline[:increment][:total_num].to_i += item[:timeline][:increment][:total_num].to_i
+      timeline[:increment][:month_num].to_i += item[:timeline][:increment][:month_num].to_i
+      timeline[:increment][:quantity].to_i  += item[:timeline][:increment][:quantity].to_i
 
-      timeline[:increment][:favs_count] += item[:timeline][:increment][:favs_count]
-      timeline[:increment][:skus_count] += item[:timeline][:increment][:skus_count]
+      timeline[:increment][:favs_count].to_i += item[:timeline][:increment][:favs_count].to_i
+      timeline[:increment][:skus_count].to_i += item[:timeline][:increment][:skus_count].to_i
 
-      timeline[:increment][:total_sales] += item[:timeline][:increment][:total_sales]
-      timeline[:increment][:month_sales] += item[:timeline][:increment][:month_sales]
-      timeline[:increment][:qty_sales]   += item[:timeline][:increment][:qty_sales]
+      timeline[:increment][:total_sales].to_f += item[:timeline][:increment][:total_sales].to_f
+      timeline[:increment][:month_sales].to_f += item[:timeline][:increment][:month_sales].to_f
+      timeline[:increment][:qty_sales] .to_f  += item[:timeline][:increment][:qty_sales].to_f
     end
   end
 
-  def each_timelines(items, item_ids=[])
-    timeline = ActiveSupport::JSON.decode(Timeline.new().to_json).symbolize_keys
+  def each_timelines(items, timestamp, item_ids=[])
+    timeline = ActiveSupport::JSON.decode(Timeline.new.to_json).symbolize_keys
     items.each do |id, item|
       if item_ids.empty?
-        timeline_sum(timeline, item)
+        timeline_sum(timeline, item, timestamp)
       elsif item_ids.include?(id)
-        timeline_sum(timeline, item)
+        timeline_sum(timeline, item, timestamp)
       end
     end
     return timeline

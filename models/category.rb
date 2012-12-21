@@ -73,22 +73,29 @@ class Category
       end
     end
 
-    def each_categories(categories, items)
+    def each_categories(categories, items, timestamp)
       logger.info "批量处理，店内分类。"
       categories.each do |id, category|
         if category[:item_ids].empty?
           logger.warn "#{category[:cat_id]} #{category[:cat_name]}，分类中没有宝贝。"
         else
-          category[:item_ids] = category[:item_ids].uniq.compact # 去重、去空
-          timeline = Timeline.new(each_timelines(items, category[:item_ids]))
           current_category = Category.where(seller_nick: category[:seller_nick], _id: category[:cat_id]).first
+
+          category[:item_ids] = category[:item_ids].uniq.compact # 去重、去空
+          timeline = each_timelines(items, timestamp, category[:item_ids])
+
           if current_category
             if current_category.item_ids == category[:item_ids]
               category.delete(:item_ids)
             else
-              category[:item_ids] = (current_category.item_ids << category[:item_ids]).uniq
+              category[:item_ids] = (current_category.item_ids + category[:item_ids]).uniq
             end
-            category[:timelines] = (current_category.timelines << timeline).uniq
+
+            if timeline.is_a?(Hash) 
+              timeline_arr = ActiveSupport::JSON.decode(current_category.timelines.to_json)
+              timeline_arr << timeline
+              category[:timelines] = timeline_arr.uniq
+            end
             current_category.update_attributes( category )
           else
             category[:timelines] = [timeline]

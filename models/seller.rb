@@ -92,11 +92,17 @@ class Seller
         # 店铺分类
         threading = Category.sync(threading, page_dom) # 分类及宝贝归类。
         threading[:items] = Item.each_items(threading[:items]) # 写入宝贝数据，获取数值变化。
-        Category.each_categories( threading[:categories], threading[:items] )
-        Campaign.each_campaigns(  threading[:campaigns],  threading[:items] )
+        Category.each_categories( threading[:categories], threading[:items], timestamp )
+        Campaign.each_campaigns( threading[:campaigns],  threading[:items], timestamp )
         # 更新店铺
-        timeline = Timeline.new( Seller.each_timelines( threading[:items] ) )
-        update_attributes(timelines: (timelines << timeline), items_count: threading[:items].keys.count, timestamp: Time.now.to_i)
+        data = { items_count: threading[:items].keys.count, timestamp: Time.now.to_i }
+        timeline = Seller.each_timelines(threading[:items], timestamp)
+        if timeline.is_a?(Hash) 
+          timeline_arr = ActiveSupport::JSON.decode(timelines.to_json)
+          timeline_arr << timeline
+          data[:timelines] = timeline_arr.uniq
+        end
+        update_attributes(data)
       end
     end
   end

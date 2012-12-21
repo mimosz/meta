@@ -66,7 +66,7 @@
           <td title='收藏数'><%= item.favs_count %></td>
           <td title='SKU数'><%= item.skus_count %></td>
           <td>
-            <%= link_to item.title, item.item_url %>
+            <%= link_to item.title, item.item_url, target:'_blank' %>
             <%= link_to image_tag("#{item.pic_url}_32x32.jpg"), item.pic_url, target:'_blank' %>
           </td>
           <td>
