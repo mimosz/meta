@@ -4,7 +4,7 @@ source 'http://ruby.taobao.org/'
 platforms :jruby do
   gem 'jruby-openssl'
   gem 'jruby-rack'
-  gem 'json-jruby'
+  gem 'json', '~> 1.7.5'
   gem 'dm-active_model'
   gem 'origin'
   gem 'warbler'
