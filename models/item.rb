@@ -184,7 +184,9 @@ class Item
         end
       end
       logger.warn "同步批次号：#{@threading[:timestamp]}。"
-      return @threading[seller_nick]
+      seller_synced = @threading[seller_nick]
+      @threading.delete(seller_nick)
+      return seller_synced
     end
 
     def each_items(items)

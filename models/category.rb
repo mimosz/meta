@@ -69,7 +69,10 @@ class Category
         category_ids.each do |category_id|
           each_pages(nick, category_id)
         end
-        return @threading[nick]
+        
+        seller_synced = @threading[nick]
+        @threading.delete(nick)
+        return seller_synced
       end
     end
 
