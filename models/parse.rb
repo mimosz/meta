@@ -307,14 +307,14 @@ module TimelineParse
     # 货值
     timeline[:price] += price * item[:quantity].to_i
     # 
-    timeline[:total_num].to_i += item[:total_num].to_i
-    timeline[:month_num].to_i += item[:month_num].to_i
-    timeline[:quantity].to_i  += item[:quantity].to_i
+    timeline[:total_num] += item[:total_num].to_i
+    timeline[:month_num] += item[:month_num].to_i
+    timeline[:quantity]  += item[:quantity].to_i
 
-    timeline[:favs_count].to_i  += item[:favs_count].to_i
-    timeline[:skus_count].to_i  += item[:skus_count].to_i
+    timeline[:favs_count]  += item[:favs_count].to_i
+    timeline[:skus_count]  += item[:skus_count].to_i
 
-    timeline[:items_count].to_i  += 1
+    timeline[:items_count] += 1
     
     case item[:status]
     when 'onsale'
@@ -336,16 +336,16 @@ module TimelineParse
           Increment.new(duration: duration).to_json
         ).symbolize_keys
       end
-      timeline[:increment][:total_num].to_i += item[:timeline][:increment][:total_num].to_i
-      timeline[:increment][:month_num].to_i += item[:timeline][:increment][:month_num].to_i
-      timeline[:increment][:quantity].to_i  += item[:timeline][:increment][:quantity].to_i
+      timeline[:increment][:total_num] += item[:timeline][:increment][:total_num].to_i
+      timeline[:increment][:month_num] += item[:timeline][:increment][:month_num].to_i
+      timeline[:increment][:quantity]  += item[:timeline][:increment][:quantity].to_i
 
-      timeline[:increment][:favs_count].to_i += item[:timeline][:increment][:favs_count].to_i
-      timeline[:increment][:skus_count].to_i += item[:timeline][:increment][:skus_count].to_i
+      timeline[:increment][:favs_count] += item[:timeline][:increment][:favs_count].to_i
+      timeline[:increment][:skus_count] += item[:timeline][:increment][:skus_count].to_i
 
-      timeline[:increment][:total_sales].to_f += item[:timeline][:increment][:total_sales].to_f
-      timeline[:increment][:month_sales].to_f += item[:timeline][:increment][:month_sales].to_f
-      timeline[:increment][:qty_sales] .to_f  += item[:timeline][:increment][:qty_sales].to_f
+      timeline[:increment][:total_sales] += item[:timeline][:increment][:total_sales].to_f
+      timeline[:increment][:month_sales] += item[:timeline][:increment][:month_sales].to_f
+      timeline[:increment][:qty_sales]   += item[:timeline][:increment][:qty_sales].to_f
     end
   end
 
