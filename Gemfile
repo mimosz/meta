@@ -35,7 +35,7 @@ gem 'kaminari', git: 'git://github.com/mimosa/kaminari.git', require: 'kaminari/
 # Jobs requirements
 gem 'slim'
 gem 'sidekiq'
-gem 'sidekiq-scheduler'
+gem 'sidekiq-scheduler', git: 'git://github.com/mimosa/sidekiq-scheduler.git'
 gem 'redis-objects', require: nil
 
 gem 'grape' # API接口
