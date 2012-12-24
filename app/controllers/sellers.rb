@@ -17,6 +17,10 @@ Meta.controllers :sellers do
   end
 
   post :create do
+    if params[:seller][:store_url].blank? || params[:seller][:store_url].match(/http:\/\/(.*)\.tmall\.com/).nil?
+      flash[:error] = "铁公鸡，你倒是给个天猫店铺网址呀？！"
+      redirect url(:sellers, :index)
+    end
     result = Seller.sync(params[:seller][:store_url])
     if result.nil?
       flash[:error] = '非常抱歉，您提供的店铺地址，系统未能识别~'
