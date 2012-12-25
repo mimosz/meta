@@ -1,4 +1,4 @@
-准备源：
+准备软件源：
 ```
 sudo apt-get -y install python-software-properties
 sudo add-apt-repository ppa:webupd8team/java
@@ -76,13 +76,13 @@ make
 sudo make install
 ```
 
-启动脚本：（[/etc/init.d/nginx](https://gist.github.com/4372383#)）
+启动脚本：（[/etc/init.d/nginx](https://gist.github.com/4372383#file-gistfile1-sh)）
 ```
 sudo vim /etc/init.d/nginx
 sudo chmod +x /etc/init.d/nginx
 ```
 
-重写配置文件：（[/etc/nginx/conf/nginx.conf](https://gist.github.com/4372383#)）
+重写配置文件：（[/etc/nginx/conf/nginx.conf](https://gist.github.com/4372383#file-gistfile2-nginxconf)）
 ```
 sudo rm -fr /etc/nginx/conf/nginx.conf
 sudo vim /etc/nginx/conf/nginx.conf
@@ -122,7 +122,7 @@ mizuno -D -E production -P /tmp/mizuno_meta.pid
 nohup bundle exec sidekiq-scheduler -e production -C ./config/sidekiq.yml -r ./config/boot.rb >> log/sidekiq.log 2>&1 &
 ```
 
-绑定到 Nginx 上：（[/etc/nginx/conf/sites-enabled/meta](https://gist.github.com/4372383#)）
+绑定到 Tengine 上：（[/etc/nginx/conf/sites-enabled/meta](https://gist.github.com/4372383#file-gistfile3-nginxconf)）
 ```
 sudo vim /etc/nginx/conf/sites-enabled/meta
 sudo service nginx restart
