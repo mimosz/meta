@@ -1,6 +1,3 @@
-基于 Ubuntu 的配置说明
-====
-
 准备源：
 ```
 sudo apt-get -y install python-software-properties
@@ -86,16 +83,24 @@ sudo update-rc.d nginx defaults
 sudo service nginx start
 ```
 
-取出应用，启动服务：
+取出应用，安装依赖库：
 ```
 git clone https://github.com/mimosa/meta.git
 
 cd meta
 
 bundle install
+```
 
-echo "Web 服务，占用 9292 端口"
+启动服务：
+```
 mizuno -D -E production -P /tmp/mizuno_meta.pid
-echo "队列服务，执行定时抓取任务"
+
 nohup bundle exec sidekiq-scheduler -e production -C ./config/sidekiq.yml -r ./config/boot.rb >> log/sidekiq.log 2>&1 &
+```
+
+停止服务：
+```
+kill -9 $(cat /tmp/sidekiq_meta.pid)
+kill -9 $(cat /tmp/mizuno_meta.pid)
 ```
