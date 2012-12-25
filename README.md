@@ -74,14 +74,23 @@ cd tengine
 make
 
 sudo make install
-echo "启动脚本"
+```
+
+启动脚本：（[/etc/init.d/nginx](https://gist.github.com/4372383#)）
+```
 sudo vim /etc/init.d/nginx
 sudo chmod +x /etc/init.d/nginx
-echo "重写配置文件"
+```
+
+重写配置文件：（[/etc/nginx/conf/nginx.conf](https://gist.github.com/4372383#)）
+```
 sudo rm -fr /etc/nginx/conf/nginx.conf
 sudo vim /etc/nginx/conf/nginx.conf
 sudo mkdir /etc/nginx/conf/sites-enabled /etc/nginx/conf/conf.d
-echo "注册系统服务"
+```
+
+注册系统服务：
+```
 sudo update-rc.d nginx defaults
 sudo service nginx start
 ```
@@ -111,6 +120,12 @@ exit
 mizuno -D -E production -P /tmp/mizuno_meta.pid
 
 nohup bundle exec sidekiq-scheduler -e production -C ./config/sidekiq.yml -r ./config/boot.rb >> log/sidekiq.log 2>&1 &
+```
+
+绑定到 Nginx 上：（[/etc/nginx/conf/sites-enabled/meta](https://gist.github.com/4372383#)）
+```
+sudo vim /etc/nginx/conf/sites-enabled/meta
+sudo service nginx restart
 ```
 
 停止服务：
