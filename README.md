@@ -91,6 +91,9 @@ sudo service nginx start
 git clone https://github.com/mimosa/meta.git
 
 cd meta
+
+bundle install
+
 echo "Web 服务，占用 9292 端口"
 mizuno -D -E production -P /tmp/mizuno_meta.pid
 echo "队列服务，执行定时抓取任务"
