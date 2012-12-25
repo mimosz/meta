@@ -2,6 +2,8 @@
 *.rbc
 .bundle
 .config
+.DS_Store
+Gemfile.lock
 coverage
 InstalledFiles
 lib/bundler/man
