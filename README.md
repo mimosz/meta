@@ -17,6 +17,9 @@ sudo apt-get -y install git-core
 安装 RVM, JRuby ：
 ```
 curl -L https://get.rvm.io | bash -s stable
+
+source .bash_profile
+
 rvm install jruby
 ```
 
