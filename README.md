@@ -95,6 +95,17 @@ cd meta
 bundle install
 ```
 
+初始化 MongoDB ：（或在 config/mongoid.yml 修改）
+```
+mongo
+
+use beta;
+
+db.addUser('howl','800622');
+
+exit
+```
+
 启动服务：
 ```
 mizuno -D -E production -P /tmp/mizuno_meta.pid
