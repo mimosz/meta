@@ -70,7 +70,7 @@ class Category
           each_pages(nick, category_id)
         end
         
-        return @threading[seller_nick]
+        return @threading[nick]
       end
     end
 
