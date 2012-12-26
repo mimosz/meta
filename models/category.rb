@@ -70,9 +70,7 @@ class Category
           each_pages(nick, category_id)
         end
         
-        seller_synced = @threading[nick]
-        @threading.delete(nick)
-        return seller_synced
+        return @threading[seller_nick]
       end
     end
 
