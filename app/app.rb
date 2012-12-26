@@ -6,7 +6,7 @@ class Meta < Padrino::Application
   register Padrino::Helpers
   register Kaminari::Helpers::SinatraHelpers
 
-  disable :sessions
+  enable :sessions
 
   ##
   # Caching support
