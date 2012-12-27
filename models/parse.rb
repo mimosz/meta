@@ -336,9 +336,28 @@ module TimelineParse
           Increment.new(duration: duration).to_json
         ).symbolize_keys
       end
-      timeline[:increment][:total_num] += item[:timeline][:increment][:total_num].to_i
-      timeline[:increment][:month_num] += item[:timeline][:increment][:month_num].to_i
-      timeline[:increment][:quantity]  += item[:timeline][:increment][:quantity].to_i
+      # 销售总数
+      total_num = item[:timeline][:increment][:total_num].to_i
+      if total_num > 0
+        timeline[:increment][:total_num] += total_num
+      else
+        timeline[:increment][:total_refunds] += total_num
+      end
+      # 月销量
+      month_num = item[:timeline][:increment][:month_num].to_i
+      if month_num > 0
+        timeline[:increment][:month_num] += month_num
+      else
+        timeline[:increment][:month_refunds] += month_num
+      end
+
+      # 库存数
+      quantity = item[:timeline][:increment][:quantity].to_i
+      if quantity < 0
+        timeline[:increment][:quantity] += quantity
+      else
+        timeline[:increment][:qty_ins] += quantity
+      end
 
       timeline[:increment][:favs_count] += item[:timeline][:increment][:favs_count].to_i
       timeline[:increment][:skus_count] += item[:timeline][:increment][:skus_count].to_i
