@@ -93,6 +93,9 @@ class Category
             end
 
             if timeline.is_a?(Hash) 
+              if timeline.has_key?(:increment)
+                timeline[:increment][:items_count] = timeline[:items_count] - current_category.items_count
+              end
               timeline_arr = ActiveSupport::JSON.decode(current_category.timelines.to_json)
               timeline_arr << timeline
               category[:timelines] = timeline_arr.uniq

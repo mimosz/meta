@@ -53,7 +53,10 @@ class Campaign
             campaign[:item_ids] = (current_campaign.item_ids + campaign[:item_ids]).uniq
           end
           # 
-          if timeline.is_a?(Hash) 
+          if timeline.is_a?(Hash)
+            if timeline.has_key?(:increment)
+              timeline[:increment][:items_count] = timeline[:items_count] - current_campaign.items_count
+            end
             timeline_arr = ActiveSupport::JSON.decode(current_campaign.timelines.to_json)
             timeline_arr << timeline
             campaign[:timelines] = timeline_arr.uniq

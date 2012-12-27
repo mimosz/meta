@@ -76,11 +76,11 @@
               <th><%= campaign.timelines.last.increment.duration %>小时，差值</th>
               <td><%= campaign.timelines.last.increment.items_count %></td>
               <td colspan='3'>&nbsp;</td>
-              <td><%= campaign.timelines.last.increment.quantity %></td>
+              <td><%= campaign.timelines.last.increment.quantity %> | <%= campaign.timelines.last.increment.qty_ins %></td>
               <td><%= campaign.timelines.last.increment.qty_sales.round(2) %></td>
               <td><%= campaign.timelines.last.increment.skus_count %></td>
 
-              <td><%= campaign.timelines.last.increment.total_num %></td>
+              <td><%= campaign.timelines.last.increment.total_num %> | <%= campaign.timelines.last.increment.total_refunds %></td>
               <td><%= campaign.timelines.last.increment.total_sales.round(2) %></td>
 
               <td><%= campaign.timelines.last.increment.favs_count %></td>

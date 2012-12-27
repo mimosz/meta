@@ -7,11 +7,9 @@
       <th>在售</th>
       <th>售罄</th>
       <th>下架</th>
-      <th>新入库</th>
       <th>库存</th>
       <th>销售额</th>
       <th>款数</th>
-      <th>退款</th>
       <th>总销量</th>
       <th>销售额</th>
       <th>收藏量</th>
@@ -27,11 +25,11 @@
        <td><%= timeline.onsales_count %></td>
        <td><%= timeline.soldouts_count %></td>
        <td><%= timeline.inventories_count %></td>
-       <td>&nbsp;</td>
+
        <td><%= timeline.quantity %></td>
        <td>&nbsp;</td>
        <td><%= timeline.skus_count %></td>
-       <td>&nbsp;</td>
+
        <td><%= timeline.total_num %></td>
        <td>&nbsp;</td>
        <td><%= timeline.favs_count %></td>
@@ -50,13 +48,11 @@
           <th><%= timeline.increment.duration %>小时，差值</th>
           <td><%= timeline.increment.items_count %></td>
           <td colspan='3'>&nbsp;</td>
-          <td><%= timeline.increment.qty_ins %></td>
-          <td><%= timeline.increment.quantity %></td>
+          <td><%= timeline.increment.quantity %> | <%= timeline.increment.qty_ins %></td>
           <td><%= timeline.increment.qty_sales.round(2) %></td>
           <td><%= timeline.increment.skus_count %></td>
 
-          <td><%= timeline.increment.total_refunds %></td>
-          <td><%= timeline.increment.total_num %></td>
+          <td><%= timeline.increment.total_num %> | <%= timeline.increment.total_refunds %></td>
           <td><%= timeline.increment.total_sales.round(2) %></td>
 
           <td><%= timeline.increment.favs_count %></td>

@@ -98,6 +98,9 @@ class Seller
         data = { items_count: threading[:items].keys.count, timestamp: Time.now.to_i }
         timeline = Seller.each_timelines(threading[:items], timestamp)
         if timeline.is_a?(Hash) 
+          if timeline.has_key?(:increment)
+            timeline[:increment][:items_count] = timeline[:items_count] - items_count
+          end
           timeline_arr = ActiveSupport::JSON.decode(timelines.to_json)
           timeline_arr << timeline
           data[:timelines] = timeline_arr.uniq
