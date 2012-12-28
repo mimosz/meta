@@ -4,10 +4,20 @@ require 'nokogiri'
 require 'pp'
 
 class Crawler
-  def initialize(url)
+  def initialize(url, debug=false)
     @url     = url
+    @debug   = debug
     @request = Nestful::Request.new(@url)
-    @request.headers = { 'User-Agent' => switcher }
+    @request.headers = { 
+      'Accept'          => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8', 
+      'Accept-Charset'  => 'UTF-8,*;q=0.5',
+      'Accept-Encoding' => 'gzip,deflate,sdch', 
+      'Accept-Language' => 'zh-CN,zh;q=0.8',
+      'Cache-Control'   => 'max-age=0',
+      'Connection'      => 'keep-alive', 
+      'Host'            => 'detail.tmall.com', 
+      'User-Agent'      => switcher 
+    }
     @request.timeout = 15 # 秒
   end
 
@@ -31,7 +41,7 @@ class Crawler
   def get_html(opts={})
     path      = opts[:path]      || request.query_path
     try_count = opts[:try_count] || 0
-    debug # 调试
+    debug if @debug # 调试
     response = request.connection.get(path)
     return response.body.force_encoding('GB18030').encode('UTF-8')
   rescue Nestful::TimeoutError, Errno::ETIMEDOUT, Errno::ECONNRESET
@@ -43,12 +53,14 @@ class Crawler
     end
   rescue Nestful::Redirection => error
     location = error.response['Location']
+    cookie   = error.response['Set-Cookie']
     if location.include?('deny.html') || location.include?('error.php')
       puts "========================宝宝醒了，换浏览器。========================"
       self.headers = { 'User-Agent' => switcher, 'Referer' => request.url }
       get_html({try_count: (try_count + 1)})
     else
-      url = location
+      self.headers = { 'Cookie' => cookie, 'User-Agent' => switcher, 'Referer' => request.url }
+      self.url = location
       get_html({path: fixed_path, try_count: try_count})
     end
   rescue Nestful::ServerError => error
@@ -57,7 +69,7 @@ class Crawler
 
   def get_json(try_count=0)
     request.execute
-  rescue Nestful::TimeoutError, Errno::ETIMEDOUT
+  rescue Nestful::TimeoutError, Errno::ETIMEDOUT, Errno::ECONNRESET
     if try_count < 3 # 重试3次
       puts "========================开始重试========================"
       get_json(try_count + 1)
@@ -171,7 +183,7 @@ class Crawler
   end
 
   def item_url(num_iid)
-    'http://detail.tmall.com/item.htm?id=' + num_iid.to_s
+    "http://detail.tmall.com/auction/item_detail.htm?item_num_id=#{num_iid.to_s}&show_review=1&tbpm=1"
   end
 
   def item_taobao_url
