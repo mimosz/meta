@@ -1,5 +1,9 @@
 # -*- encoding: utf-8 -*-
 module InitSync
+  def thread_reset(nick)
+    @threading.delete(nick) if @threading.has_key?(nick)
+  end
+
   def init_item(tag, nick, store_url)
     # 起始化
     unless defined?(@threading)
@@ -7,10 +11,10 @@ module InitSync
     end
     # 初始值
     unless @threading.has_key?(nick)
-      crawler = Crawler.new(store_url)
+      crawler = Crawler.new(store_url, true)
       crawler.item_search_url
 
-      @threading[nick] = { seller_nick: nick, seller_tag: tag, crawler: crawler, pages: 1, page: 1, campaigns: {}, categories: {}, items: {}, retries: {} }
+      @threading[nick] = { seller_nick: nick, seller_tag: tag, crawler: crawler, pages: 1, page: 1, campaigns: {}, categories: {}, items: {} }
       logger.info "#{nick}，宝贝抓取准备就绪。"
     end
   end
@@ -149,7 +153,6 @@ module ItemParse
         return set_item_sales(seller_id, item, (try_count+4))
       else
         logger.error "宝贝 #{item[:num_iid]}，#{try_count}次重试失败，我放弃啦~"
-        @threading[seller_id][:retries][item[:num_iid]] = item
         return nil
       end
     end

@@ -1,5 +1,6 @@
 # -*- encoding: utf-8 -*-
 require 'nestful'
+require 'httparty'
 require 'nokogiri'
 require 'pp'
 
@@ -13,8 +14,8 @@ class Crawler
       'Accept-Charset'  => 'UTF-8,*;q=0.5',
       'Accept-Encoding' => 'gzip,deflate,sdch', 
       'Accept-Language' => 'zh-CN,zh;q=0.8',
-      'Cache-Control'   => 'max-age=0',
-      'Connection'      => 'keep-alive', 
+      'Cache-Control'   => 'no-store',
+      'Connection'      => 'close', 
       'Host'            => 'detail.tmall.com', 
       'User-Agent'      => switcher 
     }
@@ -43,7 +44,8 @@ class Crawler
     try_count = opts[:try_count] || 0
     debug if @debug # 调试
     response = request.connection.get(path)
-    return response.body.force_encoding('GB18030').encode('UTF-8')
+    body     = response.body.force_encoding('GB18030').encode('UTF-8')
+    return body
   rescue Nestful::TimeoutError, Errno::ETIMEDOUT, Errno::ECONNRESET
     if opts[:try_count].to_i < 3 # 重试3次
       puts "========================开始重试========================"
@@ -68,7 +70,10 @@ class Crawler
   end
 
   def get_json(try_count=0)
-    request.execute
+    body = request.execute
+    return Zlib::GzipReader.new(StringIO.new(body)).read
+  rescue Zlib::GzipFile::Error
+    return body
   rescue Nestful::TimeoutError, Errno::ETIMEDOUT, Errno::ECONNRESET
     if try_count < 3 # 重试3次
       puts "========================开始重试========================"

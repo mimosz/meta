@@ -107,6 +107,7 @@ class Seller
         end
         update_attributes(data)
       end
+      Item.thread_reset(_id)
     end
   end
 

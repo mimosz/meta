@@ -5,7 +5,7 @@ Meta.controllers :resque, parent: :sellers do
     if current_seller
       resque.reload_schedule! if resque::Scheduler.dynamic
       @queues = {}
-      @queues["Store-#{@seller.shop_id}"] = { cron: '0 0 * * *', class: 'SyncWorker', args: @seller._id, description: "#{@seller._id} 的数据抓取。"}
+      @queues["Store-#{@seller.shop_id}"] = { cron: '0 4 * * *', class: 'SyncWorker', args: @seller._id, description: "#{@seller._id} 的数据抓取。"}
     end
   end
 

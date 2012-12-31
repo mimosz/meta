@@ -130,57 +130,23 @@ class Item
 
   class << self
 
-    def sync_retry(seller_id, item_ids, try_count=0)
-      if @threading[seller_id][:retries].empty?
-        return item_ids
-      end
-      if try_count > 0
-        logger.error "获取销售数据出错，#{try_count}分钟后，重试。"
-        sleep try_count.minutes.to_f
-      end
-      @threading[seller_id][:retries].each do |item_id, item|
-        # 获取销售信息
-        item = set_item_sales(seller_id, item)
-        if item
-          logger.warn "成功获取：#{item_id}，宝贝信息。"
-          item_ids << item_id
-          @threading[seller_id][:items][item_id] = item
-          @threading[seller_id][:retries].delete(item_id)
-        else
-          logger.error "宝贝：#{item_id}，加入下一轮，重试队列。"
-        end
-      end
-      return sync_retry(seller_id, item_ids, (try_count+4))
-    end
-
     def sync(seller, page_dom)
       # 起始化
       seller_nick = seller.seller_nick
       init_item(seller.user_tag, seller_nick, seller.store_url)
       # 执行分页
-      item_ids = each_pages(seller_nick, page_dom)
-      item_ids = sync_retry(seller_nick, item_ids)
+      item_ids    = each_pages(seller_nick, page_dom)
+      items_count = item_ids.uniq.count
       # 下架或售罄同步
-      return recycling(seller, item_ids.uniq)
-    end
-
-    def recycling(seller, item_ids)  
-      # 起始化
-      items_count = item_ids.count
-      seller_nick = seller.seller_nick
       if seller.items_count > 0 && seller.items_count > items_count
-        unknown_ids = seller.item_ids - item_ids
-        unless unknown_ids.empty?
-          unknown_ids.each do |item_id|
+        inventory_ids = seller.item_ids - item_ids
+        unless inventory_ids.empty?
+          inventory_ids.each do |item_id|
             item = { num_iid: item_id, status: 'inventory', timestamp: @threading[:timestamp] }
-            # 获取销售信息
-            item = set_item_sales(seller_nick, item)
-            if item
-              # 注入集合
-              @threading[seller_nick][:items][item[:num_iid]] = item
-            end
+            item = set_item_sales(seller_nick, item) # 获取销售信息
+            # 注入集合
+            @threading[seller_nick][:items][item[:num_iid]] = item if item
           end
-          unknown_ids = sync_retry(seller_nick, unknown_ids)
         end
       end
       logger.warn "同步批次号：#{@threading[:timestamp]}。"

@@ -22,6 +22,7 @@ end
 gem 'rake'
 gem 'sinatra-flash', require: 'sinatra/flash'
 gem 'nestful'
+gem 'httparty'
 gem 'nokogiri' # 解析HTML
 gem 'mini_magick'
 
