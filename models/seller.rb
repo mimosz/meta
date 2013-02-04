@@ -54,7 +54,7 @@ class Seller
       @crawler[_id] = Crawler.new(rate_url)
       page_dom = @crawler[_id].get_dom
       return nil if page_dom.nil?
-      info_list = page_dom.at('div.personal-info').at('ul').css('li')
+      info_list = page_dom.at('div.left-box').at('ul').css('li')
       company   = info_list[0].at('div.fleft2').text.strip
       label     = info_list[1].at('a').text.strip
       user_tag  = page_dom.at('input#userTag')[:value].to_i
